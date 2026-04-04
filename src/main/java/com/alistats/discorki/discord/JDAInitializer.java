@@ -8,6 +8,7 @@ import com.alistats.discorki.config.DiscordConfigProperties;
 
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
+import net.dv8tion.jda.api.interactions.InteractionContextType;
 import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import net.dv8tion.jda.api.interactions.commands.build.OptionData;
@@ -37,30 +38,30 @@ public class JDAInitializer implements CommandLineRunner {
                                                 .addOption(OptionType.USER, "discord-username", "The user to add", true)
                                                 .addOption(OptionType.STRING, "riot-id",
                                                                 "Riot ID of the account (e.g. PlayerName#EUW)", true)
-                                                .setGuildOnly(true),
+                                                .setContexts(InteractionContextType.GUILD),
                                 Commands.slash("remove", "Remove a user from Discorki")
                                                 .addOption(OptionType.USER, "discord-username", "The user to remove",
                                                                 true)
-                                                .setGuildOnly(true),
+                                                .setContexts(InteractionContextType.GUILD),
                                 Commands.slash("list", "List all users in Discorki")
-                                                .setGuildOnly(true),
+                                                .setContexts(InteractionContextType.GUILD),
                                 Commands.slash("leaderboard", "Get ranked leaderboard for all summoners in this server")
                                                 .addOption(OptionType.BOOLEAN, "force-update", "Force update the leaderboard",
                                                                 false)
-                                                .setGuildOnly(true),
+                                                .setContexts(InteractionContextType.GUILD),
                                 Commands.slash("unlink", "Unlink a summoner from a user")
                                                 .addOption(OptionType.USER, "discord-username",
                                                                 "The user to unlink a summoner from", true)
                                                 .addOption(OptionType.STRING, "riot-id",
                                                                 "Riot ID of the summoner to unlink (e.g. PlayerName#EUW)",
                                                                 true)
-                                                .setGuildOnly(true),
+                                                .setContexts(InteractionContextType.GUILD),
                                 Commands.slash("channel", "Set the default channel for Discorki to post in")
                                                 .addOption(OptionType.CHANNEL, "channel", "The channel to post in",
                                                                 true)
-                                                .setGuildOnly(true),
+                                                .setContexts(InteractionContextType.GUILD),
                                 Commands.slash("debug", "Discorki developers only - Get debug info")
-                                                .setGuildOnly(true),
+                                                .setContexts(InteractionContextType.GUILD),
                                 Commands.slash("aram", "Generate aram teams")
                                                 .addOption(OptionType.USER, "other-captain",
                                                                 "Other team captain (you're the first)", true)
@@ -77,7 +78,7 @@ public class JDAInitializer implements CommandLineRunner {
                                                                                 .addChoice("Marksman", "Marksman")
                                                                                 .addChoice("Support", "Support")
                                                                                 .addChoice("Tank", "Tank"))
-                                                .setGuildOnly(true),
+                                                .setContexts(InteractionContextType.GUILD),
                                 Commands.slash("latest", "Get latest match for a summoner")
                                                 .addOption(OptionType.STRING, "summoner",
                                                                 "Riot ID of the summoner (e.g. PlayerName#EUW)",
