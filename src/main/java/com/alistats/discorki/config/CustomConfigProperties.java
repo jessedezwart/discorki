@@ -17,8 +17,7 @@ import lombok.Setter;
 @ConfigurationPropertiesScan
 @ConfigurationProperties(prefix = "app")
 public class CustomConfigProperties {
-    @URL(message = "The url used by post game notifications for summoner lookup.")
-    private String summonerLookupUrl = "https://euw.op.gg/summoner/userName=%s";
+    public static final String SUMMONER_LOOKUP_URL = "https://op.gg/lol/summoners/euw/%s";
     @URL(message = "The url used by post game notifications for match lookup.")
     private String matchLookupUrl = "https://tracker.gg/lol/match/%s";
     @NotBlank

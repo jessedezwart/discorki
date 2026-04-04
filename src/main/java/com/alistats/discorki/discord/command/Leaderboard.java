@@ -133,7 +133,7 @@ public class Leaderboard extends AbstractCommand implements Command {
             // Build external link for summoner
             String normalizedRiotId = rank.getSummoner().getRiotId().replace("#", "-");
             String urlEncodedUsername = URLEncoder.encode(normalizedRiotId, StandardCharsets.UTF_8);
-            String summonerLookupUrl = String.format(config.getSummonerLookupUrl(), urlEncodedUsername);
+            String summonerLookupUrl = String.format(CustomConfigProperties.SUMMONER_LOOKUP_URL, urlEncodedUsername);
             sb.append("[")
                 .append(rank.getSummoner().getRiotId())
                 .append("](")

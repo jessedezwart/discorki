@@ -1,6 +1,8 @@
 services:
   caddy:
     image: caddy:2
+    profiles:
+      - caddy
     restart: unless-stopped
     ports:
       - "80:80"
@@ -19,20 +21,21 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      # Override datasource URL to reach the db container
-      - SPRING_DATASOURCE_URL=jdbc:mariadb://db:3306/discorki
-      # Secrets
-      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=discorki
+      - SPRING_DATASOURCE_USERNAME=discorki
+      - SPRING_DATASOURCE_PASSWORD=discorki
       - RIOT_API_KEY=${RIOT_API_KEY}
       - RIOT_PLATFORM_ROUTING=${RIOT_PLATFORM_ROUTING}
       - RIOT_REGIONAL_ROUTING=${RIOT_REGIONAL_ROUTING}
       - RIOT_RATE_LIMIT_PER_TWO_MINUTES=${RIOT_RATE_LIMIT_PER_TWO_MINUTES}
       - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
-      - APP_HOST=${HOST}
       - DEVELOPER_DISCORD_ID=${DEVELOPER_DISCORD_ID}
-      - SUMMONER_LOOKUP_URL=${SUMMONER_LOOKUP_URL}
+      - APP_HOST=${HOST}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: mariadb:11
@@ -42,6 +45,12 @@ services:
       MARIADB_USER: discorki
       MARIADB_PASSWORD: discorki
       MARIADB_ROOT_PASSWORD: discorki
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$$MARIADB_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
     volumes:
       - mariadb_data:/var/lib/mysql
 

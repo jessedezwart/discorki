@@ -272,7 +272,7 @@ public class EmbedFactory {
     private String buildSummonerLookupUrl(String displayName) {
         String normalizedDisplayName = displayName.replace("#", "-");
         String urlEncodedUsername = URLEncoder.encode(normalizedDisplayName, StandardCharsets.UTF_8);
-        return String.format(config.getSummonerLookupUrl(), urlEncodedUsername);
+        return String.format(CustomConfigProperties.SUMMONER_LOOKUP_URL, urlEncodedUsername);
     }
 
     private MessageEmbed.Field buildDamageField(List<List<ParticipantDto>> teams) {

@@ -1,0 +1,12 @@
+.git
+.github
+.claude
+.claude-octopus
+.vscode
+.codex
+target
+CLAUDE.md
+.env
+.env.*
+README.md
+LICENSE
