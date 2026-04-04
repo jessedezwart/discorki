@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import com.alistats.discorki.config.CustomConfigProperties;
 import com.alistats.discorki.model.Player;
@@ -166,7 +167,7 @@ public class EmbedFactory {
 
         // Build the description
         int durationInMinutes = Math.round(match.getInfo().getGameDuration() / 60);
-        String matchUrl = String.format(config.getMatchLookupUrl(),match.getInfo().getGameId());
+        String matchUrl = String.format(config.getMatchLookupUrl(), match.getMetadata().getMatchId());
         String description = "Match duration: " + durationInMinutes + " minutes.\n [Detailed game stats ↗️]("
                 + matchUrl + ")\n*When no solo queue rank is found, flex queue rank will be shown.*";
         builder.setDescription(description);
@@ -190,7 +191,7 @@ public class EmbedFactory {
         for (ParticipantDto participant : team) {
             Player matchingPlayer = server.getPlayers().stream()
                     .filter(player -> player.getSummoners().stream()
-                            .anyMatch(summoner -> summoner.getId().equals(participant.getSummonerId())))
+                            .anyMatch(summoner -> summoner.getPuuid().equals(participant.getPuuid())))
                     .findFirst().orElse(null);
     
             if (matchingPlayer != null) {
@@ -204,10 +205,6 @@ public class EmbedFactory {
     
 
     private String buildMentionedSummonerFieldLine(ParticipantDto participant, String teamPosition, Player player) {
-        // Build external link for summoner
-        String urlEncodedUsername = URLEncoder.encode(participant.getSummonerName(), StandardCharsets.UTF_8);
-        String summonerLookupUrl = String.format(config.getSummonerLookupUrl(), urlEncodedUsername);
-
         StringBuilder str = new StringBuilder();
         if (teamPosition != null && !teamPosition.equals("")) {
             str.append(roleEmojis.get(teamPosition));
@@ -215,12 +212,18 @@ public class EmbedFactory {
 
         // Get champion name
         String championName = gameConstantsController.getChampionNameByKey(participant.getChampionId());
+        String displayName = resolveParticipantDisplayName(participant);
+        String summonerLookupUrl = buildSummonerLookupUrl(displayName);
 
         str.append(" <@")
                 .append(player.getDiscordId())
-                .append("> [↗️](")
-                .append(summonerLookupUrl)
-                .append(") ")
+                .append(">");
+        if (summonerLookupUrl != null) {
+            str.append(" [↗️](")
+                    .append(summonerLookupUrl)
+                    .append(")");
+        }
+        str.append(" ")
                 .append(championName)
                 .append("\n");
 
@@ -228,11 +231,8 @@ public class EmbedFactory {
     }
 
     private String buildSummonerFieldLine(ParticipantDto participant, String teamPosition) {
-        // Build external link for summoner
-        String urlEncodedUsername = URLEncoder.encode(participant.getSummonerName(), StandardCharsets.UTF_8);
-        String summonerLookupUrl = String.format(config.getSummonerLookupUrl(), urlEncodedUsername);
-
-        String summonerName = participant.getSummonerName();
+        String displayName = resolveParticipantDisplayName(participant);
+        String summonerLookupUrl = buildSummonerLookupUrl(displayName);
         // Get champion name
         String championName = gameConstantsController.getChampionNameByKey(participant.getChampionId());
 
@@ -241,15 +241,35 @@ public class EmbedFactory {
             str.append(roleEmojis.get(teamPosition));
         }
 
-        str.append(" [")
-                .append(summonerName)
+        str.append(" ");
+        if (summonerLookupUrl != null) {
+            str.append("[")
+                .append(displayName)
                 .append("](")
                 .append(summonerLookupUrl)
-                .append(") ")
+                .append(") ");
+        } else {
+            str.append(displayName)
+                .append(" ");
+        }
+        str
                 .append(championName)
                 .append("\n");
 
         return str.toString();
+    }
+
+    private String resolveParticipantDisplayName(ParticipantDto participant) {
+        if (StringUtils.hasText(participant.getRiotId())) {
+            return participant.getRiotId();
+        }
+        return participant.getSummonerName();
+    }
+
+    private String buildSummonerLookupUrl(String displayName) {
+        String normalizedDisplayName = displayName.replace("#", "-");
+        String urlEncodedUsername = URLEncoder.encode(normalizedDisplayName, StandardCharsets.UTF_8);
+        return String.format(config.getSummonerLookupUrl(), urlEncodedUsername);
     }
 
     private MessageEmbed.Field buildDamageField(List<List<ParticipantDto>> teams) {

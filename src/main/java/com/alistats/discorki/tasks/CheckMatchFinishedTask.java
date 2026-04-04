@@ -99,7 +99,7 @@ public class CheckMatchFinishedTask extends Task {
             personalNotificationCheckers
                     .forEach(checker -> {
                         LOG.info("Checking for '{}'  for {}", checker.getClass().getSimpleName(),
-                                summoner.getName());
+                                summoner.getRiotId());
                         Optional<PersonalPostGameNotificationResult> result = checker.check(match, summoner);
                         result.ifPresent(personalPostGameNotificationResult -> embeds.addPersonalEmbed(summoner, embedFactory.getPersonalPostGameNotificationEmbed(personalPostGameNotificationResult)));
                     });
@@ -167,7 +167,7 @@ public class CheckMatchFinishedTask extends Task {
 
         HashMap<Summoner, ParticipantDto> summonerParticipantMap = new HashMap<>();
         filteredParticipants.forEach(participant -> trackedSummoners.stream()
-                .filter(summoner -> summoner.getId().equals(participant.getSummonerId()))
+                .filter(summoner -> summoner.getPuuid().equals(participant.getPuuid()))
                 .forEach(summoner -> summonerParticipantMap.put(summoner, participant)));
 
         return summonerParticipantMap;

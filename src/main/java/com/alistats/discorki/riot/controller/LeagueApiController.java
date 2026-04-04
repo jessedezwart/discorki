@@ -14,6 +14,7 @@ import org.springframework.web.client.RestTemplate;
 
 import com.alistats.discorki.config.RestTemplateResponseErrorHandler;
 import com.alistats.discorki.config.RiotConfigProperties;
+import com.alistats.discorki.riot.dto.AccountDto;
 import com.alistats.discorki.riot.dto.CurrentGameInfoDto;
 import com.alistats.discorki.riot.dto.LeagueEntryDto;
 import com.alistats.discorki.riot.dto.MatchDto;
@@ -27,6 +28,7 @@ public class LeagueApiController {
         private final RateLimiter rateLimiter;
 
         private static final String BASE_URL = "api.riotgames.com/lol";
+        private static final String ACCOUNT_URL = "api.riotgames.com/riot/account/v1";
         private static final int TWO_MINUTES_IN_SECONDS = 120;
 
         // Since the checkInGame task is scheduled every 5 minutes at second 0
@@ -49,22 +51,48 @@ public class LeagueApiController {
                 rateLimiter.tryAcquire(1, MAX_RATE_LIMIT_TIMEOUT, TimeUnit.SECONDS);
         }
 
-        public SummonerDto getSummoner(String summonerName)
+        /**
+         * Looks up a Riot account by Riot ID (gameName + tagLine) using the Account v1 API.
+         * This replaces the deprecated summoner-by-name endpoint.
+         */
+        public AccountDto getAccountByRiotId(String gameName, String tagLine)
+                        throws HttpClientErrorException, HttpServerErrorException {
+                rateLimit();
+                String url = "https://" +
+                                config.getRegionalRouting() +
+                                "." +
+                                ACCOUNT_URL +
+                                "/accounts/by-riot-id/" +
+                                URLEncoder.encode(gameName, StandardCharsets.UTF_8) +
+                                "/" +
+                                URLEncoder.encode(tagLine, StandardCharsets.UTF_8) +
+                                "?api_key=" +
+                                config.getKey();
+
+                URI uri = URI.create(url);
+
+                return restTemplate.getForObject(uri, AccountDto.class);
+        }
+
+        /**
+         * Fetches summoner data by PUUID (summoner v4).
+         * Use after {@link #getAccountByRiotId} to get the full summoner profile.
+         */
+        public SummonerDto getSummonerByPuuid(String encryptedPuuid)
                         throws HttpClientErrorException, HttpServerErrorException {
                 rateLimit();
                 String url = "https://" +
                                 config.getPlatformRouting() +
                                 "." +
                                 BASE_URL +
-                                "/summoner/v4/summoners/by-name/" +
-                                URLEncoder.encode(summonerName, StandardCharsets.UTF_8) +
+                                "/summoner/v4/summoners/by-puuid/" +
+                                encryptedPuuid +
                                 "?api_key=" +
                                 config.getKey();
 
                 URI uri = URI.create(url);
 
                 return restTemplate.getForObject(uri, SummonerDto.class);
-
         }
 
         public CurrentGameInfoDto getCurrentGameInfo(String encryptedSummonerId)
@@ -74,7 +102,7 @@ public class LeagueApiController {
                                 config.getPlatformRouting() +
                                 "." +
                                 BASE_URL +
-                                "/spectator/v4/active-games/by-summoner/" +
+                                "/spectator/v5/active-games/by-summoner/" +
                                 encryptedSummonerId +
                                 "?api_key=" +
                                 config.getKey();
@@ -104,15 +132,16 @@ public class LeagueApiController {
         }
 
         @Cacheable("ranks")
-        public LeagueEntryDto[] getLeagueEntries(String encryptedSummonerId)
+        public LeagueEntryDto[] getLeagueEntriesByPuuid(String puuid)
                         throws HttpClientErrorException, HttpServerErrorException {
                 rateLimit();
+                String encodedPuuid = URLEncoder.encode(puuid, StandardCharsets.UTF_8);
                 String url = "https://" +
                                 config.getPlatformRouting() +
                                 "." +
                                 BASE_URL +
-                                "/league/v4/entries/by-summoner/" +
-                                encryptedSummonerId +
+                                "/league/v4/entries/by-puuid/" +
+                                encodedPuuid +
                                 "?api_key=" +
                                 config.getKey();
 
@@ -121,7 +150,7 @@ public class LeagueApiController {
                 return restTemplate.getForObject(uri, LeagueEntryDto[].class);
         }
 
-        public String getMostRecentMatchId(String encryptedSummonerId)
+        public String getMostRecentMatchId(String puuid)
                         throws HttpClientErrorException, HttpServerErrorException {
                 rateLimit();
                 StringBuilder url = new StringBuilder();
@@ -130,7 +159,7 @@ public class LeagueApiController {
                                 .append(".")
                                 .append(BASE_URL)
                                 .append("/match/v5/matches/by-puuid/")
-                                .append(encryptedSummonerId)
+                                .append(puuid)
                                 .append("/ids?start=0&count=1&api_key=")
                                 .append(config.getKey());
 

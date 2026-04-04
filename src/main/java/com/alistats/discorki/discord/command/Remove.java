@@ -18,7 +18,7 @@ public class Remove extends AbstractCommand implements Command {
     // Suppressed because the option discord=username is required, so it will never be null
     public void run(SlashCommandInteractionEvent event) {
         String userId = event.getOption("discord-username").getAsUser().getId();
-        playerRepo.deleteById(userId);
+        playerRepo.deleteByDiscordIdAndServer(userId, obtainServer(event.getGuild()));
         event.getHook().sendMessage(String.format("Stopped tracking <@%s>", userId)).queue();
     }
 }

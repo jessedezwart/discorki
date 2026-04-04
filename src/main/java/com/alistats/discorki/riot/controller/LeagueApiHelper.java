@@ -16,9 +16,9 @@ import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
 public class LeagueApiHelper {
     @Autowired private LeagueApiController apiController;
 
-    public MatchDto getMostRecentMatch(String encryptedSummonerId)
+    public MatchDto getMostRecentMatch(String puuid)
             throws HttpClientErrorException, HttpServerErrorException {
-        String matchId = apiController.getMostRecentMatchId(encryptedSummonerId);
+        String matchId = apiController.getMostRecentMatchId(puuid);
         if (matchId == null) {
             return null;
         }
@@ -39,7 +39,7 @@ public class LeagueApiHelper {
 
         // fetch all the soloq ranks off all team members
         for (ParticipantDto participant : participants) {
-            LeagueEntryDto[] leagueEntries = apiController.getLeagueEntries(participant.getSummonerId());
+            LeagueEntryDto[] leagueEntries = apiController.getLeagueEntriesByPuuid(participant.getPuuid());
             if (leagueEntries != null) {
                 LeagueEntryDto rankedSolo = null;
                 LeagueEntryDto rankedFlex = null;

@@ -41,7 +41,7 @@ public class ClashGameStartNotification extends Notification implements GameStar
         // Check for tracked summoners if they are in the current game
         for (Summoner summoner : summoners) {
             for (ParticipantDto participant : participants) {
-                if (participant.getSummonerId().equals(summoner.getId())) {
+                if (participant.getPuuid().equals(summoner.getPuuid())) {
                     summonersInGame.put(summoner, participant);
                 }
             }

@@ -49,8 +49,9 @@ public class Player {
         summoners.removeIf(summoner -> summoner.getId().equals(id));
     }
 
-    public boolean hasSummonerByName(String name) {
-        return summoners.stream().anyMatch(summoner -> summoner.getName().equalsIgnoreCase(name));
+    public boolean hasSummonerByRiotId(String gameName, String tagLine) {
+        return summoners.stream().anyMatch(s ->
+            gameName.equalsIgnoreCase(s.getGameName()) && tagLine.equalsIgnoreCase(s.getTagLine()));
     }
 
     public Player(User user, Server server) {

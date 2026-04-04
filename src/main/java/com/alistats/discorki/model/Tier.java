@@ -11,6 +11,7 @@ public enum Tier {
     SILVER("⚪", false),
     GOLD("🟡", false),
     PLATINUM("🟢", false),
+    EMERALD("🟩", false),
     DIAMOND("🔵", false),
     MASTER("🟣", true),
     GRANDMASTER("🔴", true),
@@ -20,7 +21,7 @@ public enum Tier {
     private final String emoji;
 
     private static final int LP_VALUE_PER_TIER = 400;
-    private static final int NORMAL_TIERS = 6;
+    private static final int NORMAL_TIERS = 7;
     
     Tier(String emoji, boolean isApex) {
         this.isApex = isApex;

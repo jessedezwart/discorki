@@ -113,10 +113,11 @@ public class Leaderboard extends AbstractCommand implements Command {
         sb = new StringBuilder();
         for (Rank rank : ranks) {
             // Build external link for summoner
-            String urlEncodedUsername = URLEncoder.encode(rank.getSummoner().getName(), StandardCharsets.UTF_8);
+            String normalizedRiotId = rank.getSummoner().getRiotId().replace("#", "-");
+            String urlEncodedUsername = URLEncoder.encode(normalizedRiotId, StandardCharsets.UTF_8);
             String summonerLookupUrl = String.format(config.getSummonerLookupUrl(), urlEncodedUsername);
             sb.append("[")
-                .append(rank.getSummoner().getName())
+                .append(rank.getSummoner().getRiotId())
                 .append("](")
                 .append(summonerLookupUrl)
                 .append(") ")

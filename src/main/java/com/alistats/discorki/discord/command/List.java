@@ -45,7 +45,7 @@ public class List extends AbstractCommand implements Command {
             // for each summoner in user
             for (Summoner summoner : player.getSummoners()) {
                 sb.append("   - ")
-                        .append(summoner.getName())
+                        .append(summoner.getRiotId())
                         .append("\n");
             }
         }

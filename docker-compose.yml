@@ -1,0 +1,51 @@
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      - HOST=${HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - discorki
+
+  discorki:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Override datasource URL to reach the db container
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://db:3306/discorki
+      # Secrets
+      - SPRING_DATASOURCE_PASSWORD=${DB_PASSWORD}
+      - RIOT_API_KEY=${RIOT_API_KEY}
+      - RIOT_PLATFORM_ROUTING=${RIOT_PLATFORM_ROUTING}
+      - RIOT_REGIONAL_ROUTING=${RIOT_REGIONAL_ROUTING}
+      - RIOT_RATE_LIMIT_PER_TWO_MINUTES=${RIOT_RATE_LIMIT_PER_TWO_MINUTES}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - APP_HOST=${HOST}
+      - DEVELOPER_DISCORD_ID=${DEVELOPER_DISCORD_ID}
+      - SUMMONER_LOOKUP_URL=${SUMMONER_LOOKUP_URL}
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: discorki
+      MARIADB_USER: discorki
+      MARIADB_PASSWORD: discorki
+      MARIADB_ROOT_PASSWORD: discorki
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+volumes:
+  caddy_data:
+  caddy_config:
+  mariadb_data:

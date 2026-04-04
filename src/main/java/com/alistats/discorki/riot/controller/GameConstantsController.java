@@ -22,10 +22,24 @@ public class GameConstantsController {
     private final RestTemplate restTemplate = new RestTemplate();
 
     private final String BASE_URL_DOCS = "https://static.developer.riotgames.com/docs/lol";
-    private String BASE_URL_DDRAGON;
+    private final String BASE_URL_DDRAGON;
 
     public GameConstantsController(RiotConfigProperties riotConfig) {
-        BASE_URL_DDRAGON = "http://ddragon.leagueoflegends.com/cdn/" + riotConfig.getDataDragonVersion() + "/data/en_US";
+        String version = fetchLatestDDragonVersion();
+        BASE_URL_DDRAGON = "https://ddragon.leagueoflegends.com/cdn/" + version + "/data/en_US";
+    }
+
+    private String fetchLatestDDragonVersion() {
+        try {
+            String[] versions = restTemplate.getForObject(
+                    "https://ddragon.leagueoflegends.com/api/versions.json", String[].class);
+            if (versions != null && versions.length > 0) {
+                return versions[0];
+            }
+        } catch (Exception e) {
+            // fall through to safe default
+        }
+        return "15.7.1";
     }
 
     @Cacheable("gamemodes")

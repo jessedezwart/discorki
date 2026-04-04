@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.alistats.discorki.config.CustomConfigProperties;
-import com.alistats.discorki.config.RiotConfigProperties;
 import com.alistats.discorki.model.Tier;
 import com.alistats.discorki.riot.controller.GameConstantsController;
 import com.alistats.discorki.util.StringUtil;
@@ -20,10 +19,6 @@ public class ImageService {
 
     private final String DATA_DRAGON_URL = "https://ddragon.leagueoflegends.com/cdn";
     private String DATA_DRAGON_VERSION;
-
-    public ImageService(RiotConfigProperties riotConfig) {
-        DATA_DRAGON_VERSION = riotConfig.getDataDragonVersion();
-    }
 
     // maybe the riot cdn can provide an image url or a slug for the champ
     public URL getChampionTileUrl(int championId) {

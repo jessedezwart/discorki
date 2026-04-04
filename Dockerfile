@@ -1,9 +1,9 @@
-FROM maven:latest AS maven
+FROM eclipse-temurin:25-jdk AS maven
 WORKDIR /usr/src/app
 COPY . /usr/src/app
-RUN mvn clean package -DskipTests
+RUN ./mvnw clean package -DskipTests
 
-FROM amazoncorretto:17
+FROM eclipse-temurin:25-jre
 ARG JAR_FILE=discorki.jar
 WORKDIR /opt/app
 COPY --from=maven /usr/src/app/target/${JAR_FILE} /opt/app/

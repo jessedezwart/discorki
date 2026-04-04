@@ -159,7 +159,7 @@ public class CheckJustInGameTask extends Task {
 
         for (Summoner s : trackedSummoners) {
             for (ParticipantDto p : participants) {
-                if (s.getId().equals(p.getSummonerId())) {
+                if (s.getPuuid().equals(p.getPuuid())) {
                     trackedSummonersInGame.add(s);
                 }
             }

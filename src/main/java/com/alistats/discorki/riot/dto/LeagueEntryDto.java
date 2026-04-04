@@ -5,14 +5,16 @@ import com.alistats.discorki.model.League;
 import com.alistats.discorki.model.QueueType;
 import com.alistats.discorki.model.Rank;
 import com.alistats.discorki.model.Tier;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import lombok.Data;
 
 @Data
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class LeagueEntryDto {
     String leagueId;
+    String puuid;
     String summonerId;
-    String summonerName;
     String queueType;
     String tier;
     String rank;

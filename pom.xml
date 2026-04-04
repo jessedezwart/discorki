@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.0.5</version>
+		<version>3.4.5</version>
 		<relativePath/>
 		<!-- lookup parent from repository -->
 	</parent>
@@ -15,13 +15,14 @@
 	<name>discorki</name>
 	<description>Runs jobs to generate different fun Discord messages related to players in your server</description>
 	<properties>
-		<java.version>17</java.version>
+		<java.version>25</java.version>
+		<lombok.version>1.18.36</lombok.version>
 	</properties>
 	<dependencies>
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
-			<version>31.1-jre</version>
+			<version>33.4.0-jre</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -30,7 +31,7 @@
 		<dependency>
 			<groupId>net.dv8tion</groupId>
 			<artifactId>JDA</artifactId>
-			<version>5.0.0-beta.1</version>
+			<version>5.2.1</version>
 			<exclusions>
 				<exclusion>
 					<groupId>club.minnced</groupId>
@@ -49,7 +50,7 @@
 		<dependency>
 			<groupId>io.pebbletemplates</groupId>
 			<artifactId>pebble-spring-boot-starter</artifactId>
-			<version>3.1.6</version>
+			<version>3.2.2</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -87,7 +88,7 @@
 		<dependency>
 			<groupId>org.apache.commons</groupId>
 			<artifactId>commons-lang3</artifactId>
-			<version>3.12.0</version>
+			<version>3.17.0</version>
 		</dependency>
 	</dependencies>
 	<repositories>
@@ -106,6 +107,22 @@
 	<build>
 		<finalName>discorki</finalName>
 		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<annotationProcessorPaths>
+						<path>
+							<groupId>org.projectlombok</groupId>
+							<artifactId>lombok</artifactId>
+						</path>
+						<path>
+							<groupId>org.springframework.boot</groupId>
+							<artifactId>spring-boot-configuration-processor</artifactId>
+						</path>
+					</annotationProcessorPaths>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>

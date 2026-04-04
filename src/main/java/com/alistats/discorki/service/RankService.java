@@ -80,7 +80,7 @@ public class RankService {
      */
     public Set<Rank> fetchRanks(Summoner summoner) {
         List<LeagueEntryDto> leagueEntries = Arrays
-                .asList(leagueApiController.getLeagueEntries(summoner.getId()));
+                .asList(leagueApiController.getLeagueEntriesByPuuid(summoner.getPuuid()));
         
 
         Set<Rank> ranks = new HashSet<>();

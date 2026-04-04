@@ -12,23 +12,27 @@ import lombok.Setter;
 @Getter
 @Setter
 public class SummonerDto {
-    private String accountId;
     private int profileIconId;
     private long revisionDate;
-    private String name;
     private String id;
     private String puuid;
     private long summonerLevel;
+    // Set externally from AccountDto after a by-puuid lookup
+    private String gameName;
+    private String tagLine;
 
     public Summoner toSummoner() {
         Summoner summoner = new Summoner();
-        summoner.setAccountId(accountId);
+        // Keep the current entity primary key populated until the model is migrated off accountId.
+        summoner.setAccountId(puuid);
         summoner.setProfileIconId(profileIconId);
         summoner.setRevisionDate(revisionDate);
-        summoner.setName(name);
+        summoner.setName(gameName);
         summoner.setId(id);
         summoner.setPuuid(puuid);
         summoner.setLevel(summonerLevel);
+        summoner.setGameName(gameName);
+        summoner.setTagLine(tagLine);
         return summoner;
     }
 }

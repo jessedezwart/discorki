@@ -45,7 +45,6 @@ spring.output.ansi.enabled=always
 riot.key=RGAPI-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 riot.platformRouting=euw1
 riot.regionalRouting=europe
-riot.rate-limit-per-second=20
 riot.rate-limit-per-two-minutes=100
 
 # discord settings
@@ -62,9 +61,9 @@ app.developer-discord-ids[0] = yourDiscordId
 ./mvnw spring-boot:run
 ```
 
-## Install - Docker compose
+## Install - Docker Compose
 
-You can also run this containerized with docker-compose. It will auto set-up SSL via Traefik. The database is not exposed so it won't be necessary to change the username and passwords. The Traefik dashboard is also not exposed.
+Runs the app with Caddy (automatic HTTPS via Let's Encrypt) and MariaDB. The `docker-compose.yml` and `Caddyfile` are included in the repo.
 
 ### Prerequisites
 
@@ -73,86 +72,19 @@ You can also run this containerized with docker-compose. It will auto set-up SSL
 
 ### Step by step
 
-1. Create a folder and add the file `docker-compose.yml` with the following contents:
+1. Clone the repo and copy the example env file:
 
-```yml
-version: "3.9"
-services:
-  traefik:
-    image: "traefik:v2.9"
-    container_name: "traefik"
-    command:
-      - "--api.insecure=false"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.email=${HTTPS_EMAIL}"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - "./letsencrypt:/letsencrypt"
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-  discorki:
-    build: https://github.com/freshcoders/discorki.git
-    ports:
-      - "8080:8080"
-    links:
-      - db:db
-    environment:
-      - spring_jpa_hibernate_ddl-auto=update
-      - spring_datasource_url=jdbc:mariadb://db:3306/discorki
-      - spring_datasource_username=discorki
-      - spring_datasource_password=discorki
-      - spring_datasource_driver-class-name=org.mariadb.jdbc.Driver
-      - spring_jpa_open-in-view=false
-      - riot_key=${RIOT_API_KEY}
-      - riot_platform-routing=${RIOT_PLATFORM_ROUTING}
-      - riot_regional-routing=${RIOT_REGIONAL_ROUTING}
-      - discord_token=${DISCORD_BOT_TOKEN}
-      - app_host=${HOST}
-      - riot_rate-limit-per-two-minutes=${RIOT_RATE_LIMIT_PER_TWO_MINUTES}
-    depends_on:
-      - db
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.discorki.rule=Host(`${HOST}`)"
-      - "traefik.http.routers.discorki.entrypoints=websecure"
-      - "traefik.http.routers.discorki.tls.certresolver=myresolver"
-  db:
-    image: mariadb
-    restart: always
-    environment:
-      MARIADB_ROOT_PASSWORD: discorki
-      MARIADB_DATABASE: discorki
-      MARIADB_USER: discorki
-      MARIADB_PASSWORD: discorki
-    volumes:
-     - ./mariadb:/var/lib/mysql
+```bash
+git clone https://github.com/freshcoders/discorki
+cd discorki
+cp .env.example .env
 ```
 
-2. Add a `.env` file with the following contents. Adjust with your keys and other data:
+2. Fill in `.env`.
+3. Run:
 
-```Bash
-HOST=discorki.nl
-HTTPS_EMAIL=
-RIOT_API_KEY=
-DISCORD_BOT_TOKEN=
-RIOT_PLATFORM_ROUTING=euw1
-RIOT_REGIONAL_ROUTING=europe
-RIOT_RATE_LIMIT_PER_TWO_MINUTES=100
-```
-
-3. Run the application:
-
-```Bash
-docker-compose up
+```bash
+docker compose up -d
 ```
 
 ## Disclaimer

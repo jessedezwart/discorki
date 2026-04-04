@@ -35,13 +35,22 @@ public class Latest extends AbstractCommand implements Command {
 
     @Transactional(readOnly = true)
     public void run(SlashCommandInteractionEvent event) throws Exception {
-        String summonerName = Optional.ofNullable(event.getOption("summoner"))
-                .orElseThrow(() -> new RuntimeException("Summoner name cannot be empty.")).getAsString();
+        String riotIdInput = Optional.ofNullable(event.getOption("summoner"))
+                .orElseThrow(() -> new RuntimeException("Summoner cannot be empty.")).getAsString();
+
+        String[] parts = riotIdInput.split("#", 2);
+        if (parts.length != 2 || parts[0].isBlank() || parts[1].isBlank()) {
+            reply(event, "Invalid Riot ID format. Use `GameName#TAG` (e.g. `PlayerName#EUW`).");
+            return;
+        }
+        String gameName = parts[0].trim();
+        String tagLine = parts[1].trim();
 
         try {
-            LOG.debug("Looking for summoner named {}", summonerName);
-            SummonerDto summonerDto = leagueApiController.getSummoner(summonerName);
-            LOG.debug("Getting most recent match for summoner {} ({}).", summonerName, summonerDto.getPuuid());
+            LOG.debug("Looking for summoner {}#{}", gameName, tagLine);
+            var accountDto = leagueApiController.getAccountByRiotId(gameName, tagLine);
+            SummonerDto summonerDto = leagueApiController.getSummonerByPuuid(accountDto.getPuuid());
+            LOG.debug("Getting most recent match for summoner {}#{} ({})", gameName, tagLine, summonerDto.getPuuid());
             MatchDto match = apiHelper.getMostRecentMatch(summonerDto.getPuuid());
             Server server = obtainServer(event.getGuild());
             event.getHook().sendMessage("Fetching player ranks... 💤").queue();
@@ -57,8 +66,8 @@ public class Latest extends AbstractCommand implements Command {
             LOG.debug("Sending embed for match {}", match.getInfo().getGameId());
             event.getHook().sendMessageEmbeds(embed).queue();
         } catch (Exception e) {
-            if (e.getMessage().contains("404")) {
-                reply(event, String.format("Summoner ***%s*** not found.", summonerName));
+            if (e.getMessage() != null && e.getMessage().contains("404")) {
+                reply(event, String.format("Summoner ***%s#%s*** not found.", gameName, tagLine));
             } else {
                 throw new Exception(e);
             }

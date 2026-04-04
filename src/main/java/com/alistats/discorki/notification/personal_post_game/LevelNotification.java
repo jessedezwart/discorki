@@ -30,7 +30,7 @@ public class LevelNotification extends Notification implements PersonalPostGameN
         long oldLevel = summoner.getLevel();
 
         try {
-            long newLevel = leagueApiController.getSummoner(summoner.getName()).toSummoner().getLevel();
+            long newLevel = leagueApiController.getSummonerByPuuid(summoner.getPuuid()).getSummonerLevel();
             if (!checkLevelCondition(oldLevel, newLevel)) return Optional.empty();
 
             summoner.setLevel(newLevel);
@@ -40,7 +40,7 @@ public class LevelNotification extends Notification implements PersonalPostGameN
             result.setNotification(this);
             result.setMatch(match);
             result.setSubject(summoner);
-            result.setTitle(String.format("%s has reached level %s!", summoner.getName(), newLevel));
+            result.setTitle(String.format("%s has reached level %s!", summoner.getRiotId(), newLevel));
             
             return Optional.of(result);
         } catch (Exception e) {

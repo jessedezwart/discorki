@@ -33,8 +33,8 @@ public class JDAInitializer implements CommandLineRunner {
                 jda.updateCommands().addCommands(
                                 Commands.slash("add", "Add a user to Discorki")
                                                 .addOption(OptionType.USER, "discord-username", "The user to add", true)
-                                                .addOption(OptionType.STRING, "league-username",
-                                                                "The in game name of the account", true)
+                                                .addOption(OptionType.STRING, "riot-id",
+                                                                "Riot ID of the account (e.g. PlayerName#EUW)", true)
                                                 .setGuildOnly(true),
                                 Commands.slash("remove", "Remove a user from Discorki")
                                                 .addOption(OptionType.USER, "discord-username", "The user to remove",
@@ -49,8 +49,8 @@ public class JDAInitializer implements CommandLineRunner {
                                 Commands.slash("unlink", "Unlink a summoner from a user")
                                                 .addOption(OptionType.USER, "discord-username",
                                                                 "The user to unlink a summoner from", true)
-                                                .addOption(OptionType.STRING, "league-username",
-                                                                "The in game name of the summoner to unlink",
+                                                .addOption(OptionType.STRING, "riot-id",
+                                                                "Riot ID of the summoner to unlink (e.g. PlayerName#EUW)",
                                                                 true)
                                                 .setGuildOnly(true),
                                 Commands.slash("channel", "Set the default channel for Discorki to post in")
@@ -78,7 +78,7 @@ public class JDAInitializer implements CommandLineRunner {
                                                 .setGuildOnly(true),
                                 Commands.slash("latest", "Get latest match for a summoner")
                                                 .addOption(OptionType.STRING, "summoner",
-                                                                "The summoner to get latest match for",
+                                                                "Riot ID of the summoner (e.g. PlayerName#EUW)",
                                                                 true),
                                 Commands.slash("help", "Show information about commands"))
                                 .queue();

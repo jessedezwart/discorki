@@ -34,7 +34,12 @@ build/
 
 
 # env files
-src/main/resources/application.properties
+.env
 out/
 update.bat
 src/main/resources/static/generated/*.png
+
+# AI stuff
+.codex
+.claude-octopus
+CLAUDE.md

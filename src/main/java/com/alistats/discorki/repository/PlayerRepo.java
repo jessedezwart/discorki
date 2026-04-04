@@ -7,7 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import com.alistats.discorki.model.Player;
 import com.alistats.discorki.model.Server;
 
-public interface PlayerRepo extends JpaRepository<Player, String> {
+public interface PlayerRepo extends JpaRepository<Player, Long> {
     Optional<Player> findByDiscordId(String discordId);
     Optional<Player> findByDiscordIdAndServer(String discordId, Server server);
+    void deleteByDiscordIdAndServer(String discordId, Server server);
 }

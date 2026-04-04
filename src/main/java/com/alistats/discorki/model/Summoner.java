@@ -28,12 +28,22 @@ public class Summoner {
     private String id;
     private String puuid;
     private long level;
+    private String gameName;
+    private String tagLine;
     @OneToMany(mappedBy = "summoner")
     private Set<Rank> ranks;
     @ManyToMany(mappedBy = "trackedSummoners")
     private Set<Match> matches;
     @ManyToMany(mappedBy = "summoners")
     private Set<Player> players;
+
+    /** Returns "gameName#tagLine" if both are set, otherwise falls back to legacy name. */
+    public String getRiotId() {
+        if (gameName != null && tagLine != null) {
+            return gameName + "#" + tagLine;
+        }
+        return name;
+    }
 
     public Optional<Match> getMatchInProgress() {
         return matches.stream().filter(m -> m.getStatus() == Status.IN_PROGRESS).findFirst();

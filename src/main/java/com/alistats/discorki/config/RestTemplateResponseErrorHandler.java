@@ -25,13 +25,8 @@ public class RestTemplateResponseErrorHandler
   @Override
   public void handleError(ClientHttpResponse httpResponse)
       throws IOException {
+    LOG.error("HTTP error response: {} {}", httpResponse.getStatusCode(), httpResponse.getStatusText());
+    throw new HttpClientErrorException(httpResponse.getStatusCode());
 
-    switch (httpResponse.getStatusCode().value()) {
-      case 403, 401 -> {
-        LOG.error("API key is rejected, did it expire?");
-        System.exit(1);
-      }
-      default -> throw new HttpClientErrorException(httpResponse.getStatusCode());
-    }
   }
 }

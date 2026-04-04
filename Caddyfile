@@ -1,0 +1,3 @@
+{$HOST} {
+    reverse_proxy discorki:8080
+}
