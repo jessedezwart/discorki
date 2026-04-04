@@ -4,7 +4,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.alistats.discorki.config.CustomConfigProperties;
@@ -14,13 +13,16 @@ import com.alistats.discorki.util.StringUtil;
 
 @Service
 public class ImageService {
-    @Autowired
-    private CustomConfigProperties customConfig;
-    @Autowired
-    private GameConstantsController gameConstantsController;
+    private final CustomConfigProperties customConfig;
+    private final GameConstantsController gameConstantsController;
 
     private final String DATA_DRAGON_URL = "https://ddragon.leagueoflegends.com/cdn";
     private String DATA_DRAGON_VERSION;
+
+    public ImageService(CustomConfigProperties customConfig, GameConstantsController gameConstantsController) {
+        this.customConfig = customConfig;
+        this.gameConstantsController = gameConstantsController;
+    }
 
     // maybe the riot cdn can provide an image url or a slug for the champ
     public URL getChampionTileUrl(int championId) {

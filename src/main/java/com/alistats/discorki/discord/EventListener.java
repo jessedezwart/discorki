@@ -2,7 +2,6 @@ package com.alistats.discorki.discord;
 
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.alistats.discorki.model.Server;
@@ -15,8 +14,11 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 
 @Service
 public class EventListener extends ListenerAdapter {
-    @Autowired
-    private ServerRepo serverRepo;
+    private final ServerRepo serverRepo;
+
+    public EventListener(ServerRepo serverRepo) {
+        this.serverRepo = serverRepo;
+    }
 
     @Override
     @SuppressWarnings("null")

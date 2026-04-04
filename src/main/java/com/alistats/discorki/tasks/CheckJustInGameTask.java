@@ -9,17 +9,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.alistats.discorki.discord.EmbedFactory;
 import com.alistats.discorki.model.Match;
 import com.alistats.discorki.model.Match.Status;
 import com.alistats.discorki.model.Server;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.game_start.GameStartNotification;
 import com.alistats.discorki.notification.result.GameStartNotificationResult;
+import com.alistats.discorki.repository.MatchRepo;
+import com.alistats.discorki.repository.ServerRepo;
+import com.alistats.discorki.repository.SummonerRepo;
+import com.alistats.discorki.riot.controller.LeagueApiController;
 import com.alistats.discorki.riot.dto.CurrentGameInfoDto;
 import com.alistats.discorki.riot.dto.CurrentGameInfoDto.ParticipantDto;
 
@@ -27,8 +31,13 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 
 @Component
 public class CheckJustInGameTask extends Task {
-    @Autowired
-    private List<GameStartNotification> gameStartNotificationCheckers;
+    private final List<GameStartNotification> gameStartNotificationCheckers;
+
+    public CheckJustInGameTask(LeagueApiController leagueApiController, SummonerRepo summonerRepo, MatchRepo matchRepo,
+            ServerRepo serverRepo, EmbedFactory embedFactory, List<GameStartNotification> gameStartNotificationCheckers) {
+        super(leagueApiController, summonerRepo, matchRepo, serverRepo, embedFactory);
+        this.gameStartNotificationCheckers = gameStartNotificationCheckers;
+    }
 
     // Run every 5 minutes at 0 seconds
     // Starts with a delay to make sure JDA is initialized. Later on a singleton is

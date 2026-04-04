@@ -9,7 +9,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -26,6 +25,11 @@ import com.alistats.discorki.notification.personal_post_game.PersonalPostGameNot
 import com.alistats.discorki.notification.result.PersonalPostGameNotificationResult;
 import com.alistats.discorki.notification.result.TeamPostGameNotificationResult;
 import com.alistats.discorki.notification.team_post_game.TeamPostGameNotification;
+import com.alistats.discorki.repository.MatchRepo;
+import com.alistats.discorki.repository.ServerRepo;
+import com.alistats.discorki.repository.SummonerRepo;
+import com.alistats.discorki.discord.EmbedFactory;
+import com.alistats.discorki.riot.controller.LeagueApiController;
 import com.alistats.discorki.riot.controller.LeagueApiHelper;
 import com.alistats.discorki.riot.dto.MatchDto;
 import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
@@ -36,14 +40,22 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 
 @Component
 public class CheckMatchFinishedTask extends Task {
-    @Autowired
-    private List<TeamPostGameNotification> teamNotificationCheckers;
-    @Autowired
-    private List<PersonalPostGameNotification> personalNotificationCheckers;
-    @Autowired
-    private LeagueApiHelper apiHelper;
-    @Autowired
-    private CacheManager cacheManager;
+    private final List<TeamPostGameNotification> teamNotificationCheckers;
+    private final List<PersonalPostGameNotification> personalNotificationCheckers;
+    private final LeagueApiHelper apiHelper;
+    private final CacheManager cacheManager;
+
+    public CheckMatchFinishedTask(LeagueApiController leagueApiController, SummonerRepo summonerRepo,
+            MatchRepo matchRepo, ServerRepo serverRepo, EmbedFactory embedFactory,
+            List<TeamPostGameNotification> teamNotificationCheckers,
+            List<PersonalPostGameNotification> personalNotificationCheckers, LeagueApiHelper apiHelper,
+            CacheManager cacheManager) {
+        super(leagueApiController, summonerRepo, matchRepo, serverRepo, embedFactory);
+        this.teamNotificationCheckers = teamNotificationCheckers;
+        this.personalNotificationCheckers = personalNotificationCheckers;
+        this.apiHelper = apiHelper;
+        this.cacheManager = cacheManager;
+    }
 
     // Run every minute at second :30
     @Scheduled(fixedDelay = 60000, initialDelay = 30000)

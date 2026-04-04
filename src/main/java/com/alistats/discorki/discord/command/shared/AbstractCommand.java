@@ -2,7 +2,6 @@ package com.alistats.discorki.discord.command.shared;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.alistats.discorki.config.CustomConfigProperties;
 import com.alistats.discorki.discord.SlashCommandController;
@@ -21,29 +20,34 @@ import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
 public abstract class AbstractCommand {
-    @Autowired
-    protected LeagueApiController leagueApiController;
-    @Autowired
-    protected PlayerRepo playerRepo;
-    @Autowired
-    protected SummonerRepo summonerRepo;
-    @Autowired
-    protected ServerRepo serverRepo;
-
-    @Autowired
-    protected MatchRepo matchRepo;
-    @Autowired
-    protected GameConstantsController gameConstantsController;
-    @Autowired
-    protected CustomConfigProperties config;
-    @Autowired
-    protected TemplatingService templatingService;
-    @Autowired
-    protected ImageService imageService;
-    @Autowired
-    protected RankService rankService;
+    protected final LeagueApiController leagueApiController;
+    protected final PlayerRepo playerRepo;
+    protected final SummonerRepo summonerRepo;
+    protected final ServerRepo serverRepo;
+    protected final MatchRepo matchRepo;
+    protected final GameConstantsController gameConstantsController;
+    protected final CustomConfigProperties config;
+    protected final TemplatingService templatingService;
+    protected final ImageService imageService;
+    protected final RankService rankService;
 
     protected final Logger LOG = LoggerFactory.getLogger(SlashCommandController.class);
+
+    protected AbstractCommand(LeagueApiController leagueApiController, PlayerRepo playerRepo, SummonerRepo summonerRepo,
+            ServerRepo serverRepo, MatchRepo matchRepo, GameConstantsController gameConstantsController,
+            CustomConfigProperties config, TemplatingService templatingService, ImageService imageService,
+            RankService rankService) {
+        this.leagueApiController = leagueApiController;
+        this.playerRepo = playerRepo;
+        this.summonerRepo = summonerRepo;
+        this.serverRepo = serverRepo;
+        this.matchRepo = matchRepo;
+        this.gameConstantsController = gameConstantsController;
+        this.config = config;
+        this.templatingService = templatingService;
+        this.imageService = imageService;
+        this.rankService = rankService;
+    }
 
     @SuppressWarnings("null")
     protected Server obtainServer(net.dv8tion.jda.api.entities.Guild guild) {

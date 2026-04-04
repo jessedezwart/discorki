@@ -1,6 +1,5 @@
 package com.alistats.discorki.discord;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -16,11 +15,12 @@ import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 @Component
 @ConditionalOnProperty(name = "discord.enabled", havingValue = "true", matchIfMissing = true)
 public class JDAInitializer implements CommandLineRunner {
-        @Autowired
-        private DiscordConfigProperties discordConfigProperties;
+        private final DiscordConfigProperties discordConfigProperties;
         private final SlashCommandController slashCommandListener;
 
-        public JDAInitializer(SlashCommandController slashCommandListener) {
+        public JDAInitializer(DiscordConfigProperties discordConfigProperties,
+                        SlashCommandController slashCommandListener) {
+                this.discordConfigProperties = discordConfigProperties;
                 this.slashCommandListener = slashCommandListener;
         }
 

@@ -10,13 +10,22 @@ import org.springframework.stereotype.Component;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.TeamPostGameNotificationResult;
+import com.alistats.discorki.repository.SummonerRepo;
+import com.alistats.discorki.riot.controller.GameConstantsController;
+import com.alistats.discorki.riot.controller.LeagueApiController;
 import com.alistats.discorki.riot.dto.MatchDto;
 import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
 import com.alistats.discorki.riot.dto.MatchDto.InfoDto.TeamDto;
+import com.alistats.discorki.service.ImageService;
 
 // Check if summoner lost custom or coop vs AI
 @Component
 public class LostAgainstBotsNotification extends Notification implements TeamPostGameNotification {
+    public LostAgainstBotsNotification(LeagueApiController leagueApiController, SummonerRepo summonerRepo,
+            ImageService imageService, GameConstantsController leagueGameConstantsController) {
+        super(leagueApiController, summonerRepo, imageService, leagueGameConstantsController);
+    }
+
     @Override
     public String getName() {
         return "LostAgainstBotsNotification";

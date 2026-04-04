@@ -11,7 +11,6 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -36,15 +35,11 @@ import net.dv8tion.jda.api.entities.MessageEmbed;
 
 @Component
 public class EmbedFactory {
-    @Autowired
-    TemplatingService templatingService;
-    @Autowired
-    ImageService imageService;
+    private final TemplatingService templatingService;
+    private final ImageService imageService;
     final Logger LOG = LoggerFactory.getLogger(EmbedFactory.class);
-    @Autowired
-    private CustomConfigProperties config;
-    @Autowired
-    private GameConstantsController gameConstantsController;
+    private final CustomConfigProperties config;
+    private final GameConstantsController gameConstantsController;
 
     final HashMap<String, String> roleEmojis = new HashMap<>() {
         {
@@ -55,6 +50,14 @@ public class EmbedFactory {
             put("UTILITY", "❤️‍🩹");
         }
     };
+
+    public EmbedFactory(TemplatingService templatingService, ImageService imageService,
+            CustomConfigProperties config, GameConstantsController gameConstantsController) {
+        this.templatingService = templatingService;
+        this.imageService = imageService;
+        this.config = config;
+        this.gameConstantsController = gameConstantsController;
+    }
 
     public Set<MessageEmbed> getTeamPostGameNotificationEmbeds(TeamPostGameNotificationResult result) {
         EmbedBuilder builder = new EmbedBuilder();

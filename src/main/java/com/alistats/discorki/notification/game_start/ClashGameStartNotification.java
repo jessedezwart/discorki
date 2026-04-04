@@ -9,11 +9,20 @@ import org.springframework.stereotype.Component;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.GameStartNotificationResult;
+import com.alistats.discorki.repository.SummonerRepo;
+import com.alistats.discorki.riot.controller.GameConstantsController;
+import com.alistats.discorki.riot.controller.LeagueApiController;
 import com.alistats.discorki.riot.dto.CurrentGameInfoDto;
 import com.alistats.discorki.riot.dto.CurrentGameInfoDto.ParticipantDto;
+import com.alistats.discorki.service.ImageService;
 
 @Component
 public class ClashGameStartNotification extends Notification implements GameStartNotification {
+    public ClashGameStartNotification(LeagueApiController leagueApiController, SummonerRepo summonerRepo,
+            ImageService imageService, GameConstantsController leagueGameConstantsController) {
+        super(leagueApiController, summonerRepo, imageService, leagueGameConstantsController);
+    }
+
     @Override
     public String getName() {
         return "ClashGameStartNotification";

@@ -8,7 +8,6 @@ import java.util.Optional;
 
 import org.apache.commons.lang3.EnumUtils;
 import org.hibernate.Hibernate;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,10 +22,13 @@ import com.alistats.discorki.riot.dto.LeagueEntryDto;
 
 @Service
 public class RankService {
-    @Autowired
-    private LeagueApiController leagueApiController;
-    @Autowired
-    private RankRepo rankRepo;
+    private final LeagueApiController leagueApiController;
+    private final RankRepo rankRepo;
+
+    public RankService(LeagueApiController leagueApiController, RankRepo rankRepo) {
+        this.leagueApiController = leagueApiController;
+        this.rankRepo = rankRepo;
+    }
 
     /**
      * Gets all summoners from a Discord server and updates their ranks.

@@ -2,7 +2,6 @@ package com.alistats.discorki.riot.controller;
 
 import java.util.HashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
@@ -14,7 +13,11 @@ import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
 
 @Component
 public class LeagueApiHelper {
-    @Autowired private LeagueApiController apiController;
+    private final LeagueApiController apiController;
+
+    public LeagueApiHelper(LeagueApiController apiController) {
+        this.apiController = apiController;
+    }
 
     public MatchDto getMostRecentMatch(String puuid)
             throws HttpClientErrorException, HttpServerErrorException {

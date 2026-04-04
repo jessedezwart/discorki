@@ -2,7 +2,6 @@ package com.alistats.discorki.notification;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.alistats.discorki.repository.SummonerRepo;
 import com.alistats.discorki.riot.controller.LeagueApiController;
@@ -10,12 +9,20 @@ import com.alistats.discorki.riot.controller.GameConstantsController;
 import com.alistats.discorki.service.ImageService;
 
 public abstract class Notification {
-    @Autowired protected LeagueApiController leagueApiController;
-    @Autowired protected SummonerRepo summonerRepo;
-    @Autowired protected ImageService imageService;
-    @Autowired protected GameConstantsController leagueGameConstantsController;
+    protected final LeagueApiController leagueApiController;
+    protected final SummonerRepo summonerRepo;
+    protected final ImageService imageService;
+    protected final GameConstantsController leagueGameConstantsController;
 
     final protected Logger LOG = LoggerFactory.getLogger(Notification.class);
+
+    protected Notification(LeagueApiController leagueApiController, SummonerRepo summonerRepo, ImageService imageService,
+            GameConstantsController leagueGameConstantsController) {
+        this.leagueApiController = leagueApiController;
+        this.summonerRepo = summonerRepo;
+        this.imageService = imageService;
+        this.leagueGameConstantsController = leagueGameConstantsController;
+    }
 
     public abstract String getName();
     public abstract String getFancyName();

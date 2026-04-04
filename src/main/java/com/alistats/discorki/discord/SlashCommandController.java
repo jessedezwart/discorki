@@ -4,7 +4,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.alistats.discorki.discord.command.shared.Command;
@@ -16,8 +15,11 @@ import net.dv8tion.jda.api.hooks.ListenerAdapter;
 public class SlashCommandController extends ListenerAdapter {
     final Logger LOG = LoggerFactory.getLogger(SlashCommandController.class);
 
-    @Autowired
-    private List<Command> commands;
+    private final List<Command> commands;
+
+    public SlashCommandController(List<Command> commands) {
+        this.commands = commands;
+    }
 
     @Override
     @SuppressWarnings("null")

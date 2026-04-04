@@ -4,22 +4,39 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.Set;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.alistats.discorki.config.CustomConfigProperties;
 import com.alistats.discorki.discord.command.shared.AbstractCommand;
 import com.alistats.discorki.discord.command.shared.Command;
 import com.alistats.discorki.model.Match;
 import com.alistats.discorki.model.Match.Status;
+import com.alistats.discorki.repository.MatchRepo;
+import com.alistats.discorki.repository.PlayerRepo;
 import com.alistats.discorki.repository.RankRepo;
+import com.alistats.discorki.repository.ServerRepo;
+import com.alistats.discorki.repository.SummonerRepo;
+import com.alistats.discorki.riot.controller.GameConstantsController;
+import com.alistats.discorki.riot.controller.LeagueApiController;
+import com.alistats.discorki.service.ImageService;
+import com.alistats.discorki.service.RankService;
+import com.alistats.discorki.service.TemplatingService;
 
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
 @Component
 public class Debug extends AbstractCommand implements Command{
-    @Autowired
-    RankRepo rankRepo;
+    private final RankRepo rankRepo;
+
+    public Debug(LeagueApiController leagueApiController, PlayerRepo playerRepo, SummonerRepo summonerRepo,
+            ServerRepo serverRepo, MatchRepo matchRepo, GameConstantsController gameConstantsController,
+            CustomConfigProperties config, TemplatingService templatingService, ImageService imageService,
+            RankService rankService, RankRepo rankRepo) {
+        super(leagueApiController, playerRepo, summonerRepo, serverRepo, matchRepo, gameConstantsController, config,
+                templatingService, imageService, rankService);
+        this.rankRepo = rankRepo;
+    }
 
     @Override
     public String getCommandName() {

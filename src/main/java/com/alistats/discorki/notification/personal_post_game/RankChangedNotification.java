@@ -2,7 +2,6 @@ package com.alistats.discorki.notification.personal_post_game;
 
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.alistats.discorki.model.QueueType;
@@ -10,12 +9,24 @@ import com.alistats.discorki.model.Rank;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.PersonalPostGameNotificationResult;
+import com.alistats.discorki.repository.SummonerRepo;
+import com.alistats.discorki.riot.controller.GameConstantsController;
+import com.alistats.discorki.riot.controller.LeagueApiController;
 import com.alistats.discorki.riot.dto.MatchDto;
 import com.alistats.discorki.service.ImageService;
 import com.alistats.discorki.service.RankService;
 
 @Component
 public class RankChangedNotification extends Notification implements PersonalPostGameNotification {
+    private final RankService rankService;
+
+    public RankChangedNotification(LeagueApiController leagueApiController, SummonerRepo summonerRepo,
+            ImageService imageService, GameConstantsController leagueGameConstantsController,
+            RankService rankService) {
+        super(leagueApiController, summonerRepo, imageService, leagueGameConstantsController);
+        this.rankService = rankService;
+    }
+
     @Override
     public String getName() {
         return "RankChangedNotification";
@@ -28,12 +39,6 @@ public class RankChangedNotification extends Notification implements PersonalPos
     public String getDescription() {
         return "Notifies when a summoner's rank changes.";
     }
-    
-    @Autowired
-    private ImageService imageService;
-    @Autowired
-    private RankService rankService;
-
     @Override
     public Optional<PersonalPostGameNotificationResult> check(MatchDto match, Summoner summoner) {
         // Check if it was a ranked game

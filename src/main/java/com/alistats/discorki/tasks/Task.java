@@ -2,7 +2,6 @@ package com.alistats.discorki.tasks;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.alistats.discorki.discord.EmbedFactory;
@@ -13,16 +12,20 @@ import com.alistats.discorki.riot.controller.LeagueApiController;
 
 @Component
 public abstract class Task {
-    @Autowired 
-    LeagueApiController leagueApiController;
-    @Autowired
-    SummonerRepo summonerRepo;
-    @Autowired
-    MatchRepo matchRepo;
-    @Autowired
-    ServerRepo serverRepo;
-    @Autowired
-    EmbedFactory embedFactory;
+    protected final LeagueApiController leagueApiController;
+    protected final SummonerRepo summonerRepo;
+    protected final MatchRepo matchRepo;
+    protected final ServerRepo serverRepo;
+    protected final EmbedFactory embedFactory;
 
     final Logger LOG = LoggerFactory.getLogger(Task.class);
+
+    protected Task(LeagueApiController leagueApiController, SummonerRepo summonerRepo, MatchRepo matchRepo,
+            ServerRepo serverRepo, EmbedFactory embedFactory) {
+        this.leagueApiController = leagueApiController;
+        this.summonerRepo = summonerRepo;
+        this.matchRepo = matchRepo;
+        this.serverRepo = serverRepo;
+        this.embedFactory = embedFactory;
+    }
 }

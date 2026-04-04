@@ -1,6 +1,5 @@
 package com.alistats.discorki.api;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,12 +16,15 @@ import com.alistats.discorki.repository.SummonerRepo;
 @RequestMapping("/api")
 @ResponseStatus(HttpStatus.OK)
 public class ApiController {
-    @Autowired
-    SummonerRepo summonerRepo;
-    @Autowired
-    ServerRepo serverRepo;
-    @Autowired
-    MatchRepo matchRepo;
+    private final SummonerRepo summonerRepo;
+    private final ServerRepo serverRepo;
+    private final MatchRepo matchRepo;
+
+    public ApiController(SummonerRepo summonerRepo, ServerRepo serverRepo, MatchRepo matchRepo) {
+        this.summonerRepo = summonerRepo;
+        this.serverRepo = serverRepo;
+        this.matchRepo = matchRepo;
+    }
 
     @GetMapping("/info")
     public InfoDto getAllEntries() {
