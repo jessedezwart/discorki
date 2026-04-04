@@ -5,7 +5,6 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -36,10 +35,9 @@ public class LeagueApiController {
         // we assume that the timeout wont interfere with new requests
         private static final int MAX_RATE_LIMIT_TIMEOUT = 30;
 
-        public LeagueApiController(RiotConfigProperties config, RestTemplateBuilder restTemplateBuilder) {
-                restTemplate = restTemplateBuilder
-                                .errorHandler(new RestTemplateResponseErrorHandler())
-                                .build();
+        public LeagueApiController(RiotConfigProperties config) {
+                restTemplate = new RestTemplate();
+                restTemplate.setErrorHandler(new RestTemplateResponseErrorHandler());
                 this.config = config;
 
                 rateLimiter = RateLimiter

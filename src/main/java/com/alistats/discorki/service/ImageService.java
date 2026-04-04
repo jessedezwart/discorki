@@ -1,5 +1,7 @@
 package com.alistats.discorki.service;
 
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,8 +70,8 @@ public class ImageService {
 
     private URL resolveUrl(String url) {
         try {
-            return new URL(url);
-        } catch (Exception e) {
+            return URI.create(url).toURL();
+        } catch (IllegalArgumentException | MalformedURLException e) {
             throw new RuntimeException(e);
         }
     }
