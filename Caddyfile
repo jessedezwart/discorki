@@ -1,0 +1,5 @@
+# Caddy obtains and renews a TLS certificate for HOST automatically.
+{$HOST} {
+	encode zstd gzip
+	reverse_proxy discorki:8080
+}

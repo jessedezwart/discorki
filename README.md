@@ -14,8 +14,8 @@ As soon as the bot is live, you can add it via [discorki.nl](https://discorki.nl
 
 ### Prerequisites
 
-+ [Java JDK 17](https://adoptium.net/temurin/releases/?version=17)
-+ A [MariaDB](https://mariadb.org/download) database (or configure something else in the `application.properties`
++ [Java JDK 21](https://adoptium.net/temurin/releases/?version=21)
++ A [MariaDB](https://mariadb.org/download) database (or configure something else in the `application.properties`)
 
 ### Step by Step
 
@@ -25,7 +25,7 @@ As soon as the bot is live, you can add it via [discorki.nl](https://discorki.nl
 git clone https://github.com/freshcoders/discorki
 ```
 
-2. Set up the application settings at `src\main\resources\application.properties`
+2. Set up the application settings at `src/main/resources/application.properties`
 
 Example:
 
@@ -43,10 +43,8 @@ spring.output.ansi.enabled=always
 
 # riot settings
 riot.key=RGAPI-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
-riot.platformRouting=euw1
-riot.regionalRouting=europe
-riot.rate-limit-per-second=20
-riot.rate-limit-per-two-minutes=100
+riot.platform-routing=euw1
+riot.regional-routing=europe
 
 # discord settings
 discord.token=aBcDeFgHiJkLmNoPqRsTuVwXyZ
@@ -56,6 +54,8 @@ app.host = discorki.nl
 app.developer-discord-ids[0] = yourDiscordId
 ```
 
+Calls to the Riot API go through [R4J](https://github.com/stelar7/R4J), which reads the rate limits of your key from the responses, so they don't need to be configured. Champion data is always taken from the latest Data Dragon version.
+
 3. Run the application
 
 ```Bash
@@ -64,96 +64,47 @@ app.developer-discord-ids[0] = yourDiscordId
 
 ## Install - Docker compose
 
-You can also run this containerized with docker-compose. It will auto set-up SSL via Traefik. The database is not exposed so it won't be necessary to change the username and passwords. The Traefik dashboard is also not exposed.
+You can also run this containerized with Docker Compose. [Caddy](https://caddyserver.com) serves the website and automatically requests and renews an HTTPS certificate for your domain. The bot and the database are not exposed outside of the compose network.
 
 ### Prerequisites
 
-+ [Docker](https://docs.docker.com/get-docker/)
-+ [Docker Compose](https://docs.docker.com/compose/install/)
++ [Docker](https://docs.docker.com/get-docker/) with the Compose plugin
++ A domain pointing to your server, with ports 80 and 443 open
 
 ### Step by step
 
-1. Create a folder and add the file `docker-compose.yml` with the following contents:
+1. Clone the repo
 
-```yml
-version: "3.9"
-services:
-  traefik:
-    image: "traefik:v2.9"
-    container_name: "traefik"
-    command:
-      - "--api.insecure=false"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
-      - "--certificatesresolvers.myresolver.acme.email=${HTTPS_EMAIL}"
-      - "--certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json"
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-      - "--entrypoints.web.http.redirections.entrypoint.permanent=true"
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - "./letsencrypt:/letsencrypt"
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-  discorki:
-    build: https://github.com/freshcoders/discorki.git
-    ports:
-      - "8080:8080"
-    links:
-      - db:db
-    environment:
-      - spring_jpa_hibernate_ddl-auto=update
-      - spring_datasource_url=jdbc:mariadb://db:3306/discorki
-      - spring_datasource_username=discorki
-      - spring_datasource_password=discorki
-      - spring_datasource_driver-class-name=org.mariadb.jdbc.Driver
-      - spring_jpa_open-in-view=false
-      - riot_key=${RIOT_API_KEY}
-      - riot_platform-routing=${RIOT_PLATFORM_ROUTING}
-      - riot_regional-routing=${RIOT_REGIONAL_ROUTING}
-      - discord_token=${DISCORD_BOT_TOKEN}
-      - app_host=${HOST}
-      - riot_rate-limit-per-two-minutes=${RIOT_RATE_LIMIT_PER_TWO_MINUTES}
-    depends_on:
-      - db
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.discorki.rule=Host(`${HOST}`)"
-      - "traefik.http.routers.discorki.entrypoints=websecure"
-      - "traefik.http.routers.discorki.tls.certresolver=myresolver"
-  db:
-    image: mariadb
-    restart: always
-    environment:
-      MARIADB_ROOT_PASSWORD: discorki
-      MARIADB_DATABASE: discorki
-      MARIADB_USER: discorki
-      MARIADB_PASSWORD: discorki
-    volumes:
-     - ./mariadb:/var/lib/mysql
+```Bash
+git clone https://github.com/freshcoders/discorki
+cd discorki
 ```
 
-2. Add a `.env` file with the following contents. Adjust with your keys and other data:
+2. Copy `.env.example` to `.env` and fill in your keys:
 
 ```Bash
 HOST=discorki.nl
-HTTPS_EMAIL=
-RIOT_API_KEY=
-DISCORD_BOT_TOKEN=
+RIOT_API_KEY=RGAPI-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 RIOT_PLATFORM_ROUTING=euw1
 RIOT_REGIONAL_ROUTING=europe
-RIOT_RATE_LIMIT_PER_TWO_MINUTES=100
+DISCORD_BOT_TOKEN=
 ```
 
 3. Run the application:
 
 ```Bash
-docker-compose up
+docker compose up -d --build
 ```
+
+## Upgrading to Riot IDs
+
+Riot retired summoner names, so accounts are now linked by Riot ID (`name#tag`) and stored by PUUID in new tables. Existing links can be carried over: start the new version once so the tables are created, then run [`docs/migrations/2026-riot-id.sql`](docs/migrations/2026-riot-id.sql) against the database and use `/leaderboard` with `force-update` to fetch current ranks. With Docker Compose:
+
+```Bash
+docker compose exec -T db sh -c 'mariadb -udiscorki -p"$MARIADB_PASSWORD" discorki' < docs/migrations/2026-riot-id.sql
+```
+
+If you used the old Traefik setup, its `letsencrypt` folder is no longer needed. Caddy stores its certificates in a Docker volume.
 
 ## Disclaimer
 

@@ -1,0 +1,55 @@
+services:
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      HOST: ${HOST:?Set HOST in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - discorki
+
+  discorki:
+    build: .
+    restart: unless-stopped
+    environment:
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_JPA_OPEN_IN_VIEW: "false"
+      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/discorki
+      SPRING_DATASOURCE_USERNAME: discorki
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-discorki}
+      RIOT_KEY: ${RIOT_API_KEY:?Set RIOT_API_KEY in .env}
+      RIOT_PLATFORM_ROUTING: ${RIOT_PLATFORM_ROUTING:-euw1}
+      RIOT_REGIONAL_ROUTING: ${RIOT_REGIONAL_ROUTING:-europe}
+      DISCORD_TOKEN: ${DISCORD_BOT_TOKEN:?Set DISCORD_BOT_TOKEN in .env}
+      APP_HOST: ${HOST}
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:lts
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-discorki}
+      MARIADB_DATABASE: discorki
+      MARIADB_USER: discorki
+      MARIADB_PASSWORD: ${DB_PASSWORD:-discorki}
+      MARIADB_AUTO_UPGRADE: "1"
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - ./mariadb:/var/lib/mysql
+
+volumes:
+  caddy_data:
+  caddy_config:
