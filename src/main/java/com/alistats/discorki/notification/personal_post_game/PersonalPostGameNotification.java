@@ -4,8 +4,9 @@ import java.util.Optional;
 
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.result.PersonalPostGameNotificationResult;
-import com.alistats.discorki.riot.dto.MatchDto;
+
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
 
 public interface PersonalPostGameNotification {
-    Optional<PersonalPostGameNotificationResult> check(MatchDto match, Summoner summoner);
+    Optional<PersonalPostGameNotificationResult> check(LOLMatch match, Summoner summoner);
 }

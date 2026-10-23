@@ -7,6 +7,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -21,15 +23,17 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "ranks")
+@Table(name = "riot_account_ranks")
 public class Rank implements Comparable<Rank> {
     @Id
     @GeneratedValue
     private long id;
     @ManyToOne
-    @JoinColumn(name = "summoner_id", nullable = false)
+    @JoinColumn(name = "riot_account_puuid", nullable = false)
     private Summoner summoner;
     @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(32)")
     private QueueType queueType;
     @Embedded
     private League league;

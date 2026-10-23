@@ -7,7 +7,9 @@ import org.springframework.stereotype.Component;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.PersonalPostGameNotificationResult;
-import com.alistats.discorki.riot.dto.MatchDto;
+
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.lol.match.v5.MatchParticipant;
 
 @Component
 public class LevelNotification extends Notification implements PersonalPostGameNotification {
@@ -25,12 +27,18 @@ public class LevelNotification extends Notification implements PersonalPostGameN
     }
 
     @Override
-    public Optional<PersonalPostGameNotificationResult> check(MatchDto match, Summoner summoner) {
-        // we have the league api controller, and we want to use it to findbyPuuid
+    public Optional<PersonalPostGameNotificationResult> check(LOLMatch match, Summoner summoner) {
         long oldLevel = summoner.getLevel();
 
         try {
-            long newLevel = leagueApiController.getSummoner(summoner.getName()).toSummoner().getLevel();
+            // The match contains the level of each participant at the end of the game
+            Optional<MatchParticipant> participant = match.getParticipants().stream()
+                    .filter(p -> summoner.getPuuid().equals(p.getPuuid()))
+                    .findFirst();
+            if (participant.isEmpty()) {
+                return Optional.empty();
+            }
+            long newLevel = participant.get().getSummonerLevel();
             if (!checkLevelCondition(oldLevel, newLevel)) return Optional.empty();
 
             summoner.setLevel(newLevel);

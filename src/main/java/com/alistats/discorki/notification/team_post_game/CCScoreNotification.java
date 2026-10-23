@@ -1,6 +1,5 @@
 package com.alistats.discorki.notification.team_post_game;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,8 +11,9 @@ import org.springframework.stereotype.Component;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.TeamPostGameNotificationResult;
-import com.alistats.discorki.riot.dto.MatchDto;
-import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
+
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.lol.match.v5.MatchParticipant;
 
 @Component
 public class CCScoreNotification extends Notification implements TeamPostGameNotification {
@@ -34,20 +34,21 @@ public class CCScoreNotification extends Notification implements TeamPostGameNot
     public final int TRESHOLD_CCSCORE_PER_MINUTE = 6;
 
     @Override
-    public Optional<TeamPostGameNotificationResult> check(MatchDto match, HashMap<Summoner, ParticipantDto> trackedParticipants) {
+    public Optional<TeamPostGameNotificationResult> check(LOLMatch match, HashMap<Summoner, MatchParticipant> trackedParticipants) {
         // Get the player with the highest damage taken
-        List<ParticipantDto> participants = Arrays.asList(match.getInfo().getParticipants());
-        ParticipantDto playerWithHighestCCScore  = Collections.max(participants, Comparator.comparing(ParticipantDto::getTimeCCingOthers));
+        List<MatchParticipant> participants = match.getParticipants();
+        MatchParticipant playerWithHighestCCScore  = Collections.max(participants, Comparator.comparing(MatchParticipant::getTimeCCingOthers));
     
         // If the player has less than 6 CC score per minute, ignore
-        long minutesPlayed = match.getInfo().getGameDuration() / 60;
-        if (playerWithHighestCCScore.getTimeCCingOthers() / minutesPlayed < TRESHOLD_CCSCORE_PER_MINUTE) {
+        long minutesPlayed = match.getGameDuration() / 60;
+        long ccScorePerMinute = playerWithHighestCCScore.getTimeCCingOthers() / minutesPlayed;
+        if (ccScorePerMinute < TRESHOLD_CCSCORE_PER_MINUTE) {
             return Optional.empty();
         }
     
         // Check if the player is tracked
         Optional<Summoner> trackedPlayer = trackedParticipants.keySet().stream()
-                .filter(summoner -> trackedParticipants.get(summoner).getSummonerName().equals(playerWithHighestCCScore.getSummonerName()))
+                .filter(summoner -> trackedParticipants.get(summoner).getPuuid().equals(playerWithHighestCCScore.getPuuid()))
                 .findFirst();
     
         if (trackedPlayer.isEmpty()) {
@@ -60,6 +61,7 @@ public class CCScoreNotification extends Notification implements TeamPostGameNot
         result.setMatch(match);
         result.setTitle("CC King!");
         result.addExtraArgument("treshold", TRESHOLD_CCSCORE_PER_MINUTE);
+        result.addExtraArgument("ccScorePerMinute", ccScorePerMinute);
         result.addSubject(trackedPlayer.get(), playerWithHighestCCScore);
         
         return Optional.of(result);

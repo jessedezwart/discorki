@@ -1,15 +1,19 @@
 package com.alistats.discorki.discord.command;
 
-import com.alistats.discorki.discord.command.shared.AbstractCommand;
-import com.alistats.discorki.discord.command.shared.Command;
-import com.alistats.discorki.model.Player;
-import com.alistats.discorki.model.Summoner;
-
-import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
-
 import java.util.Optional;
 
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.alistats.discorki.discord.command.shared.AbstractCommand;
+import com.alistats.discorki.discord.command.shared.Command;
+import com.alistats.discorki.model.Player;
+import com.alistats.discorki.model.Server;
+import com.alistats.discorki.model.Summoner;
+import com.alistats.discorki.riot.RiotId;
+
+import net.dv8tion.jda.api.entities.User;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 
 @Component
 public class Unlink extends AbstractCommand implements Command {
@@ -17,29 +21,36 @@ public class Unlink extends AbstractCommand implements Command {
     public String getCommandName() {
         return "unlink";
     }
-    
+
     @SuppressWarnings("null")
     // Suppressed because the options are required, so it will never be null
+    @Transactional
     public void run(SlashCommandInteractionEvent event) {
+        User user = event.getOption("discord-username").getAsUser();
+        String riotIdInput = event.getOption("riot-id").getAsString();
+
         // unlink a summoner from a user
-        Optional<Player> userOpt = playerRepo.findById(event.getOption("discord-username").getAsUser().getId());
-        if (userOpt.isEmpty()) {
-            event.getHook().sendMessage("User not found.").queue();
+        Server server = obtainServer(event.getGuild());
+        Optional<Player> playerOpt = playerRepo.findByDiscordIdAndServer(user.getId(), server);
+        if (playerOpt.isEmpty()) {
+            reply(event, "User not found.");
             return;
         }
-        Optional<Summoner> summonerOpt = summonerRepo.findByName(event.getOption("league-username").getAsString());
+        Player player = playerOpt.get();
+
+        Optional<Summoner> summonerOpt = RiotId.parse(riotIdInput)
+                .flatMap(riotId -> player.getSummoners().stream()
+                        .filter(summoner -> summoner.hasRiotId(riotId.gameName(), riotId.tagLine()))
+                        .findFirst());
         if (summonerOpt.isEmpty()) {
-            event.getHook().sendMessage("Summoner not found.").queue();
+            reply(event, String.format("***%s*** is not linked to <@%s>.", riotIdInput, user.getId()));
             return;
         }
-        Player player = userOpt.get();
         Summoner summoner = summonerOpt.get();
 
-        player.removeSummonerById(summoner.getId());
-        summoner.removeLinkedPlayerById(player.getId());
+        player.removeSummoner(summoner);
+        summoner.removeLinkedPlayer(player);
         playerRepo.save(player);
-        summonerRepo.save(summoner);
-        event.getHook().sendMessage(String.format("Unlinked ***%s*** from <@%s>.", summoner.getName(), player.getId()))
-                .queue();
+        reply(event, String.format("Unlinked ***%s*** from <@%s>.", summoner.getName(), user.getId()));
     }
 }

@@ -32,9 +32,9 @@ public class Player {
     private String discordUsername;
     @ManyToMany
     @JoinTable(
-        name = "player_summoner", 
-        joinColumns = @JoinColumn(name = "player_id"), 
-        inverseJoinColumns = @JoinColumn(name = "summoner_id")
+        name = "player_riot_account",
+        joinColumns = @JoinColumn(name = "player_id"),
+        inverseJoinColumns = @JoinColumn(name = "riot_account_puuid")
     )
     private Set<Summoner> summoners = new HashSet<>();
     @ManyToOne
@@ -45,12 +45,12 @@ public class Player {
         summoners.add(summoner);
     }
 
-    public void removeSummonerById(String id) {
-        summoners.removeIf(summoner -> summoner.getId().equals(id));
+    public void removeSummoner(Summoner summoner) {
+        summoners.remove(summoner);
     }
 
-    public boolean hasSummonerByName(String name) {
-        return summoners.stream().anyMatch(summoner -> summoner.getName().equalsIgnoreCase(name));
+    public boolean hasSummoner(Summoner summoner) {
+        return summoners.contains(summoner);
     }
 
     public Player(User user, Server server) {

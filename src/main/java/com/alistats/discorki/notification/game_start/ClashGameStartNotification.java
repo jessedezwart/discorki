@@ -1,6 +1,7 @@
 package com.alistats.discorki.notification.game_start;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -9,8 +10,10 @@ import org.springframework.stereotype.Component;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.GameStartNotificationResult;
-import com.alistats.discorki.riot.dto.CurrentGameInfoDto;
-import com.alistats.discorki.riot.dto.CurrentGameInfoDto.ParticipantDto;
+
+import no.stelar7.api.r4j.basic.constants.types.lol.GameQueueType;
+import no.stelar7.api.r4j.pojo.lol.spectator.SpectatorGameInfo;
+import no.stelar7.api.r4j.pojo.lol.spectator.SpectatorParticipant;
 
 @Component
 public class ClashGameStartNotification extends Notification implements GameStartNotification {
@@ -27,21 +30,21 @@ public class ClashGameStartNotification extends Notification implements GameStar
         return "Notifies when a clash game starts.";
     }
 
-    public Optional<GameStartNotificationResult> check(CurrentGameInfoDto currentGame, Set<Summoner> summoners) {
+    public Optional<GameStartNotificationResult> check(SpectatorGameInfo currentGame, Set<Summoner> summoners) {
         // Check if the game is a clash game
-        if (currentGame.getGameQueueConfigId() != 700) {
+        if (currentGame.getGameQueueConfig() != GameQueueType.CLASH) {
             return Optional.empty();
         }
 
         // Find summoner in participants
-        ParticipantDto[] participants = currentGame.getParticipants();
+        List<SpectatorParticipant> participants = currentGame.getParticipants();
 
-        HashMap<Summoner, ParticipantDto> summonersInGame = new HashMap<>();
+        HashMap<Summoner, SpectatorParticipant> summonersInGame = new HashMap<>();
         
         // Check for tracked summoners if they are in the current game
         for (Summoner summoner : summoners) {
-            for (ParticipantDto participant : participants) {
-                if (participant.getSummonerId().equals(summoner.getId())) {
+            for (SpectatorParticipant participant : participants) {
+                if (summoner.getPuuid().equals(participant.getPuuid())) {
                     summonersInGame.put(summoner, participant);
                 }
             }

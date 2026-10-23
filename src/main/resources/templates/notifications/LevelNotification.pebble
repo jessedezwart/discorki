@@ -1,1 +1,1 @@
-Congrats! {{ summoner.name }} achieved the amazing milestone of summoner level {{ summoner.summonerLevel }}
+Congrats! {{ summoner.name }} achieved the amazing milestone of summoner level {{ summoner.level }}

@@ -20,10 +20,11 @@ import com.alistats.discorki.model.Server;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.game_start.GameStartNotification;
 import com.alistats.discorki.notification.result.GameStartNotificationResult;
-import com.alistats.discorki.riot.dto.CurrentGameInfoDto;
-import com.alistats.discorki.riot.dto.CurrentGameInfoDto.ParticipantDto;
 
 import net.dv8tion.jda.api.entities.MessageEmbed;
+import no.stelar7.api.r4j.basic.constants.types.lol.GameQueueType;
+import no.stelar7.api.r4j.pojo.lol.spectator.SpectatorGameInfo;
+import no.stelar7.api.r4j.pojo.lol.spectator.SpectatorParticipant;
 
 @Component
 public class CheckJustInGameTask extends Task {
@@ -53,13 +54,13 @@ public class CheckJustInGameTask extends Task {
         LOG.info("Got {} matches in progress from db", matchesInProgress.size());
 
         // Define temp game for storing the current game to reduce api calls
-        AtomicReference<CurrentGameInfoDto> tempGame = new AtomicReference<>();
+        AtomicReference<SpectatorGameInfo> tempGame = new AtomicReference<>();
 
         summonersToCheck
                 .stream()
                 .filter(s -> !skiplist.contains(s))
                 .filter(s -> {
-                    Optional<CurrentGameInfoDto> currentGameInfoDtoOpt = getCurrentGame(s.getId());
+                    Optional<SpectatorGameInfo> currentGameInfoDtoOpt = getCurrentGame(s.getPuuid());
 
                     if (currentGameInfoDtoOpt.isEmpty()) {
                         return false;
@@ -76,19 +77,20 @@ public class CheckJustInGameTask extends Task {
                 .forEach(s -> {
                     // Get participants from current game and check if other
                     // tracked summoners are in the game. If so, add to skiplist
-                    CurrentGameInfoDto game = tempGame.get();
+                    SpectatorGameInfo game = tempGame.get();
                     Set<Summoner> trackedSummonersInGame = filterTrackedSummoners(summonersToCheck,
                             game.getParticipants());
 
-                    // Skip if no queue config id is found
-                    if (game.getGameQueueConfigId() == 0) {
+                    // Skip custom games, they don't show up in match history
+                    GameQueueType queue = game.getGameQueueConfig();
+                    if (queue == null || queue == GameQueueType.CUSTOM) {
                         LOG.warn("No queue config id found for game {}", game.getGameId());
                         return;
                     }
 
                     // Create match object and save to database
                     Match match = new Match(game.getGameId(), trackedSummonersInGame, Status.IN_PROGRESS,
-                            game.getGameQueueConfigId());
+                            queue.getValues().length > 0 ? queue.getValues()[0] : 0);
                     matchRepo.save(match);
 
                     LOG.info("Found new match {} for {} summoners", match.getId(),
@@ -102,18 +104,16 @@ public class CheckJustInGameTask extends Task {
 
     }
 
-    private Optional<CurrentGameInfoDto> getCurrentGame(String summonerId) {
+    private Optional<SpectatorGameInfo> getCurrentGame(String puuid) {
         try {
-            return Optional.of(leagueApiController.getCurrentGameInfo(summonerId));
+            return Optional.ofNullable(leagueApiController.getCurrentGame(puuid));
         } catch (Exception e) {
-            if (!e.getMessage().contains("404")) {
-                LOG.error("Error getting current game for summoner {}", summonerId, e);
-            }
+            LOG.error("Error getting current game for summoner {}", puuid, e);
             return Optional.empty();
         }
     }
 
-    private void checkForNotableEvents(CurrentGameInfoDto currentGameInfo, Set<Summoner> trackedSummoners) {
+    private void checkForNotableEvents(SpectatorGameInfo currentGameInfo, Set<Summoner> trackedSummoners) {
         try {
             HashMap<Summoner, Set<MessageEmbed>> embeds = new HashMap<>();
             AtomicBoolean notificationFound = new AtomicBoolean(false);
@@ -154,12 +154,12 @@ public class CheckJustInGameTask extends Task {
     }
 
     public Set<Summoner> filterTrackedSummoners(Set<Summoner> trackedSummoners,
-            ParticipantDto[] participants) {
+            List<SpectatorParticipant> participants) {
         Set<Summoner> trackedSummonersInGame = new HashSet<>();
 
         for (Summoner s : trackedSummoners) {
-            for (ParticipantDto p : participants) {
-                if (s.getId().equals(p.getSummonerId())) {
+            for (SpectatorParticipant p : participants) {
+                if (s.getPuuid().equals(p.getPuuid())) {
                     trackedSummonersInGame.add(s);
                 }
             }

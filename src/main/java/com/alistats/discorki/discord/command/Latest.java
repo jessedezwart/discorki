@@ -1,6 +1,6 @@
 package com.alistats.discorki.discord.command;
 
-import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,13 +12,13 @@ import com.alistats.discorki.discord.command.shared.AbstractCommand;
 import com.alistats.discorki.discord.command.shared.Command;
 import com.alistats.discorki.model.Rank;
 import com.alistats.discorki.model.Server;
+import com.alistats.discorki.riot.RiotId;
 import com.alistats.discorki.riot.controller.LeagueApiHelper;
-import com.alistats.discorki.riot.dto.MatchDto;
-import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
-import com.alistats.discorki.riot.dto.SummonerDto;
 
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.shared.RiotAccount;
 
 @Component
 public class Latest extends AbstractCommand implements Command {
@@ -35,34 +35,38 @@ public class Latest extends AbstractCommand implements Command {
 
     @Transactional(readOnly = true)
     public void run(SlashCommandInteractionEvent event) throws Exception {
-        String summonerName = Optional.ofNullable(event.getOption("summoner"))
-                .orElseThrow(() -> new RuntimeException("Summoner name cannot be empty.")).getAsString();
-
-        try {
-            LOG.debug("Looking for summoner named {}", summonerName);
-            SummonerDto summonerDto = leagueApiController.getSummoner(summonerName);
-            LOG.debug("Getting most recent match for summoner {} ({}).", summonerName, summonerDto.getPuuid());
-            MatchDto match = apiHelper.getMostRecentMatch(summonerDto.getPuuid());
-            Server server = obtainServer(event.getGuild());
-            event.getHook().sendMessage("Fetching player ranks... 💤").queue();
-            LOG.debug("Fetching player ranks for match {}", match.getInfo().getGameId());
-            HashMap<ParticipantDto, Rank> participantRanks = apiHelper.getParticipantRanks(match.getInfo().getParticipants());
-
-            LOG.debug("Creating embed for match {}", match.getInfo().getGameId());
-            MessageEmbed embed = embedFactory.getMatchEmbed(server, match, participantRanks);
-            if (embed == null) {
-                throw new Exception("Could not create embed for match.");
-            }
-
-            LOG.debug("Sending embed for match {}", match.getInfo().getGameId());
-            event.getHook().sendMessageEmbeds(embed).queue();
-        } catch (Exception e) {
-            if (e.getMessage().contains("404")) {
-                reply(event, String.format("Summoner ***%s*** not found.", summonerName));
-            } else {
-                throw new Exception(e);
-            }
+        String riotIdInput = Optional.ofNullable(event.getOption("riot-id"))
+                .orElseThrow(() -> new RuntimeException("Riot ID cannot be empty.")).getAsString();
+        Optional<RiotId> riotId = RiotId.parse(riotIdInput);
+        if (riotId.isEmpty()) {
+            reply(event, String.format("***%s*** is not a valid Riot ID. Use the format `name#tag`.", riotIdInput));
+            return;
         }
+
+        LOG.debug("Looking for account {}", riotId.get());
+        RiotAccount account = leagueApiController.getAccountByRiotId(riotId.get().gameName(), riotId.get().tagLine());
+        if (account == null) {
+            reply(event, String.format("Riot ID ***%s*** not found.", riotId.get()));
+            return;
+        }
+
+        LOG.debug("Getting most recent match for {} ({}).", riotId.get(), account.getPUUID());
+        LOLMatch match = apiHelper.getMostRecentMatch(account.getPUUID());
+        if (match == null) {
+            reply(event, String.format("No matches found for ***%s***.", riotId.get()));
+            return;
+        }
+
+        Server server = obtainServer(event.getGuild());
+        event.getHook().sendMessage("Fetching player ranks... 💤").queue();
+        LOG.debug("Fetching player ranks for match {}", match.getGameId());
+        Map<String, Rank> participantRanks = apiHelper.getParticipantRanks(match.getParticipants());
+
+        LOG.debug("Creating embed for match {}", match.getGameId());
+        MessageEmbed embed = embedFactory.getMatchEmbed(server, match, participantRanks);
+
+        LOG.debug("Sending embed for match {}", match.getGameId());
+        event.getHook().sendMessageEmbeds(embed).queue();
     }
 
 }

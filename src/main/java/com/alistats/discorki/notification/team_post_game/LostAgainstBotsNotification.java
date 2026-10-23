@@ -1,6 +1,5 @@
 package com.alistats.discorki.notification.team_post_game;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -10,9 +9,10 @@ import org.springframework.stereotype.Component;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.TeamPostGameNotificationResult;
-import com.alistats.discorki.riot.dto.MatchDto;
-import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
-import com.alistats.discorki.riot.dto.MatchDto.InfoDto.TeamDto;
+
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.lol.match.v5.MatchParticipant;
+import no.stelar7.api.r4j.pojo.lol.match.v5.MatchTeam;
 
 // Check if summoner lost custom or coop vs AI
 @Component
@@ -33,8 +33,8 @@ public class LostAgainstBotsNotification extends Notification implements TeamPos
     }
 
     @Override
-    public Optional<TeamPostGameNotificationResult> check(MatchDto match,
-            HashMap<Summoner, ParticipantDto> trackedParticipants) {
+    public Optional<TeamPostGameNotificationResult> check(LOLMatch match,
+            HashMap<Summoner, MatchParticipant> trackedParticipants) {
         if (didAFullBotTeamWin(match)) {
             TeamPostGameNotificationResult result = new TeamPostGameNotificationResult();
             result.setNotification(this);
@@ -48,17 +48,17 @@ public class LostAgainstBotsNotification extends Notification implements TeamPos
         return Optional.empty();
     }
 
-    private boolean didAFullBotTeamWin(MatchDto match) {
-        List<TeamDto> teams = Arrays.asList(match.getInfo().getTeams());
+    private boolean didAFullBotTeamWin(LOLMatch match) {
+        List<MatchTeam> teams = match.getTeams();
         return teams.stream()
-                .filter(TeamDto::isWin)
+                .filter(MatchTeam::didWin)
                 .anyMatch(
                         team -> {
-                            List<ParticipantDto> participants = Arrays.asList(match.getInfo().getParticipants());
+                            List<MatchParticipant> participants = match.getParticipants();
 
                             // Assuming here that an empty team qualifies as a "full bot team"
                             return participants.stream()
-                                    .filter(p -> p.getTeamId() == team.getTeamId())
+                                    .filter(p -> p.getTeam() == team.getTeamId())
                                     .allMatch(p -> p.getPuuid().equals("BOT"));
                         }
 

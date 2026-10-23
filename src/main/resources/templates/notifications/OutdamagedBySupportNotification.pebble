@@ -1,4 +1,4 @@
-Hahahahaha, {{ bottom.summonerName }} just got outdamaged by his support {{ support.summonerName }}.
+Hahahahaha, {{ extraArgs.bottom.riotIdName }} just got outdamaged by his support {{ extraArgs.support.riotIdName }}.
 
-His damage: {{ bottom.totalDamageDealtToChampions }} 😥
-Support damage: **{{ support.totalDamageDealtToChampions }}**
+His damage: {{ extraArgs.bottom.totalDamageDealtToChampions }} 😥
+Support damage: **{{ extraArgs.support.totalDamageDealtToChampions }}**

@@ -11,10 +11,11 @@ import com.alistats.discorki.discord.command.shared.Command;
 import com.alistats.discorki.model.Player;
 import com.alistats.discorki.model.Server;
 import com.alistats.discorki.model.Summoner;
-import com.alistats.discorki.riot.dto.SummonerDto;
+import com.alistats.discorki.riot.RiotId;
 
 import net.dv8tion.jda.api.entities.User;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import no.stelar7.api.r4j.pojo.shared.RiotAccount;
 
 @Component
 public class Add extends AbstractCommand implements Command {
@@ -29,12 +30,18 @@ public class Add extends AbstractCommand implements Command {
         // Get and validate options
         User jdaUser = Optional.ofNullable(event.getOption("discord-username"))
                 .orElseThrow(() -> new RuntimeException("User cannot be empty.")).getAsUser();
-        String summonerName = Optional.ofNullable(event.getOption("league-username"))
-                .orElseThrow(() -> new RuntimeException("Summoner name cannot be empty.")).getAsString();
+        String riotIdInput = Optional.ofNullable(event.getOption("riot-id"))
+                .orElseThrow(() -> new RuntimeException("Riot ID cannot be empty.")).getAsString();
+        Optional<RiotId> riotIdOpt = RiotId.parse(riotIdInput);
+        if (riotIdOpt.isEmpty()) {
+            reply(event, String.format("***%s*** is not a valid Riot ID. Use the format `name#tag`.", riotIdInput));
+            return;
+        }
+        RiotId riotId = riotIdOpt.get();
 
         // Check if user is not a bot
         if (jdaUser.isBot()) {
-            LOG.info("User {} tried to link a bot.", event.getUser().getAsTag());
+            LOG.info("User {} tried to link a bot.", event.getUser().getName());
             event.getHook().sendMessage("Cannot link a bot.").queue();
             return;
         }
@@ -45,64 +52,48 @@ public class Add extends AbstractCommand implements Command {
         // Check if there already is a player with the same discord id and that guild
         LOG.debug("Looking for player named {} and server {}", jdaUser.getName(), server.getName());
         Player player = playerRepo.findByDiscordIdAndServer(jdaUser.getId(), server)
-                .orElseGet(() -> {
-                    Player newPlayer = new Player(jdaUser, server);
-                    playerRepo.save(newPlayer);
-                    return newPlayer;
-                });
+                .orElseGet(() -> playerRepo.save(new Player(jdaUser, server)));
 
         Hibernate.initialize(player.getSummoners());
 
+        // Look up the account, Riot IDs can change so always ask Riot for the puuid
+        RiotAccount account = leagueApiController.getAccountByRiotId(riotId.gameName(), riotId.tagLine());
+        if (account == null) {
+            reply(event, String.format("Riot ID ***%s*** not found.", riotId));
+            return;
+        }
+
+        Summoner summoner = summonerRepo.findById(account.getPUUID()).orElseGet(Summoner::new);
+
         // Check if summoner was already linked
-        if (player.hasSummonerByName(summonerName)) {
+        if (player.hasSummoner(summoner)) {
             LOG.info("User {} tried to link summoner {} to {} but it was already linked.",
-                    event.getUser().getAsTag(), summonerName, jdaUser.getAsTag());
-            String message = String.format("Summoner ***%s*** is already linked to <@%s>", summonerName,
-                    jdaUser.getId());
-            reply(event, message);
+                    event.getUser().getName(), riotId, jdaUser.getName());
+            reply(event, String.format("***%s*** is already linked to <@%s>", riotId, jdaUser.getId()));
             return;
         }
 
-        // Check if summoner already exists
-        Summoner summoner = summonerRepo.findByName(summonerName).orElseGet(() -> {
-            try {
-                SummonerDto summonerDto = leagueApiController.getSummoner(summonerName);
-                Summoner newSummoner = summonerDto.toSummoner();
-                return summonerRepo.save(newSummoner);
-            } catch (Exception e) {
-                String message;
-                if (e.getMessage().contains("404")) {
-                    message = String.format("Summoner ***%s*** not found.", summonerName);
-                } else {
-                    throw new RuntimeException(e);
-                }
-
-                reply(event, message);
-                return null;
-            }
-        });
-        if (summoner == null) {
+        no.stelar7.api.r4j.pojo.lol.summoner.Summoner summonerDto = leagueApiController.getSummoner(account.getPUUID());
+        if (summonerDto == null) {
+            reply(event, String.format("***%s*** has never played League of Legends on this server.", riotId));
             return;
         }
+
+        summoner.setPuuid(account.getPUUID());
+        summoner.setGameName(account.getName());
+        summoner.setTagLine(account.getTag());
+        summoner.setProfileIconId(summonerDto.getProfileIconId());
+        summoner.setRevisionDate(summonerDto.getRevisionDate());
+        summoner.setLevel(summonerDto.getSummonerLevel());
+        summoner = summonerRepo.save(summoner);
 
         // Fetch rank
-        LOG.debug("Fetching rank for summoner {}", summonerName);
-        try {
-            rankService.updateRanks(summoner);
+        LOG.debug("Fetching rank for summoner {}", riotId);
+        rankService.updateRanks(summoner);
 
-            // Add summoner to user
-            player.addSummoner(summoner);
-            playerRepo.save(player);
-            String message = String.format("Linked %s to <@%s>.", summoner.getName(), jdaUser.getId());
-            reply(event, message);
-        } catch (Exception e) {
-            String message;
-            if (e.getMessage().contains("404")) {
-                message = String.format("Summoner ***%s*** not found.", summonerName);
-            } else {
-                throw new Exception(e);
-            }
-            reply(event, message);
-        }
+        // Add summoner to user
+        player.addSummoner(summoner);
+        playerRepo.save(player);
+        reply(event, String.format("Linked %s to <@%s>.", summoner.getName(), jdaUser.getId()));
     }
 }

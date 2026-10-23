@@ -1,12 +1,9 @@
 package com.alistats.discorki.service;
 
-import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
 import java.util.Optional;
+import java.util.Set;
 
-import org.apache.commons.lang3.EnumUtils;
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,7 +16,7 @@ import com.alistats.discorki.model.Server;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.repository.RankRepo;
 import com.alistats.discorki.riot.controller.LeagueApiController;
-import com.alistats.discorki.riot.dto.LeagueEntryDto;
+import com.alistats.discorki.riot.controller.LeagueApiHelper;
 
 @Service
 public class RankService {
@@ -58,8 +55,7 @@ public class RankService {
     }
 
     public Optional<Rank> getCurrentRank(Summoner summoner, QueueType queueType) {
-        Optional<Rank> rank = rankRepo.findFirstBySummonerAndQueueTypeOrderByIdDesc(summoner, queueType);
-        return rank;
+        return rankRepo.findFirstBySummonerAndQueueTypeOrderByIdDesc(summoner, queueType);
     }
 
     /**
@@ -79,21 +75,16 @@ public class RankService {
      * @return A set of ranks for the summoner.
      */
     public Set<Rank> fetchRanks(Summoner summoner) {
-        List<LeagueEntryDto> leagueEntries = Arrays
-                .asList(leagueApiController.getLeagueEntries(summoner.getId()));
-        
-
         Set<Rank> ranks = new HashSet<>();
 
-        for (LeagueEntryDto leagueEntry : leagueEntries) {
-            // Skip non league ranks
-            if (!EnumUtils.isValidEnum(QueueType.class, leagueEntry.getQueueType())) {
-                continue;
-            }
-            Rank newRank = leagueEntry.toRank();
-            newRank.setSummoner(summoner);
-            ranks.add(newRank);
-        }
+        // Entries for unsupported queues (e.g. arena) are skipped
+        leagueApiController.getLeagueEntries(summoner.getPuuid()).stream()
+                .map(LeagueApiHelper::toRank)
+                .flatMap(Optional::stream)
+                .forEach(rank -> {
+                    rank.setSummoner(summoner);
+                    ranks.add(rank);
+                });
 
         return ranks;
     }

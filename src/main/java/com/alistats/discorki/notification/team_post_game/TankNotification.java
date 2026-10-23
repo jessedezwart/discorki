@@ -1,6 +1,5 @@
 package com.alistats.discorki.notification.team_post_game;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,8 +11,9 @@ import org.springframework.stereotype.Component;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.TeamPostGameNotificationResult;
-import com.alistats.discorki.riot.dto.MatchDto;
-import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
+
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.lol.match.v5.MatchParticipant;
 
 @Component
 public class TankNotification extends Notification implements TeamPostGameNotification {
@@ -34,22 +34,22 @@ public class TankNotification extends Notification implements TeamPostGameNotifi
     public final int TRESHOLD_DMG_TAKEN_PER_MINUTE = 7000;
 
     @Override
-    public Optional<TeamPostGameNotificationResult> check(MatchDto match, HashMap<Summoner, ParticipantDto> trackedParticipants) {
-        List<ParticipantDto> participants = Arrays.asList(match.getInfo().getParticipants());
-        ParticipantDto maxDamageTaken = Collections.max(participants,
+    public Optional<TeamPostGameNotificationResult> check(LOLMatch match, HashMap<Summoner, MatchParticipant> trackedParticipants) {
+        List<MatchParticipant> participants = match.getParticipants();
+        MatchParticipant maxDamageTaken = Collections.max(participants,
                 Comparator.comparing(
                         s -> (s.getTotalDamageTaken() +
                                 s.getDamageSelfMitigated())));
 
         // Check if max damage taken is above the treshold
-        long minutesPlayed = match.getInfo().getGameDuration() / 60;
+        long minutesPlayed = match.getGameDuration() / 60;
         int totalDamageSoaked = maxDamageTaken.getTotalDamageTaken() + maxDamageTaken.getDamageSelfMitigated();
         if (totalDamageSoaked / minutesPlayed < TRESHOLD_DMG_TAKEN_PER_MINUTE) {
             return Optional.empty();
         }
         
         for (Summoner summoner : trackedParticipants.keySet()) {
-            if (trackedParticipants.get(summoner).getSummonerName().equals(maxDamageTaken.getSummonerName())) {
+            if (trackedParticipants.get(summoner).getPuuid().equals(maxDamageTaken.getPuuid())) {
                 TeamPostGameNotificationResult result = new TeamPostGameNotificationResult();
                 result.setNotification(this);
                 result.setMatch(match);

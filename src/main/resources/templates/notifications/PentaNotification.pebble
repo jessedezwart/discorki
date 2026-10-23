@@ -1,1 +1,1 @@
-{{ participant.summonerName }} got a pentakill with **{{ champion }}**.
+{{ participant.riotIdName }} got a pentakill with **{{ champion }}**.

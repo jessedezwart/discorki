@@ -1,101 +1,90 @@
 package com.alistats.discorki.riot.controller;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import org.springframework.cache.annotation.Cacheable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
-import com.alistats.discorki.config.RiotConfigProperties;
-import com.alistats.discorki.riot.dto.constants.ChampionDto;
-import com.alistats.discorki.riot.dto.constants.GameModeDto;
-import com.alistats.discorki.riot.dto.constants.GameTypeDto;
-import com.alistats.discorki.riot.dto.constants.MapDto;
-import com.alistats.discorki.riot.dto.constants.QueueDto;
-import com.alistats.discorki.riot.dto.constants.SeasonDto;
+import no.stelar7.api.r4j.impl.lol.raw.DDragonAPI;
+import no.stelar7.api.r4j.pojo.lol.staticdata.champion.StaticChampion;
 
+/**
+ * Static game data from Data Dragon. Always uses the latest patch, so new
+ * champions show up without a config change.
+ */
 @Service
 public class GameConstantsController {
-    private final RestTemplate restTemplate = new RestTemplate();
+    private static final Logger LOG = LoggerFactory.getLogger(GameConstantsController.class);
+    private static final long REFRESH_INTERVAL_MS = 6 * 60 * 60 * 1000;
 
-    private final String BASE_URL_DOCS = "https://static.developer.riotgames.com/docs/lol";
-    private String BASE_URL_DDRAGON;
-
-    public GameConstantsController(RiotConfigProperties riotConfig) {
-        BASE_URL_DDRAGON = "http://ddragon.leagueoflegends.com/cdn/" + riotConfig.getDataDragonVersion() + "/data/en_US";
+    public enum ChampionClass {
+        Assassin, Fighter, Mage, Marksman, Support, Tank
     }
 
-    @Cacheable("gamemodes")
-    public GameModeDto[] getGameModes() {
-        return restTemplate.getForObject(BASE_URL_DOCS + "/gameModes.json", GameModeDto[].class);
-    }
+    private volatile String version;
+    private volatile Map<Integer, StaticChampion> champions;
 
-    @Cacheable("gametypes")
-    public GameTypeDto[] getGameTypes() {
-        return restTemplate.getForObject(BASE_URL_DOCS + "/gameTypes.json", GameTypeDto[].class);
-    }
-
-    @Cacheable("maps")
-    public MapDto[] getMaps() {
-        return restTemplate.getForObject(BASE_URL_DOCS + "/maps.json", MapDto[].class);
-    }
-
-    @Cacheable("queues")
-    public QueueDto[] getQueues() {
-        return restTemplate.getForObject(BASE_URL_DOCS + "/queues.json", QueueDto[].class);
-    }
-
-    @Cacheable("seasons")
-    public SeasonDto[] getSeasons() {
-        return restTemplate.getForObject(BASE_URL_DOCS + "/seasons.json", SeasonDto[].class);
-    }
-
-    @Cacheable("champions")
-    public ChampionDto getChampions() {
-        return restTemplate.getForObject(BASE_URL_DDRAGON + "/champion.json", ChampionDto.class);
-    }
-
-    public QueueDto getQueue(int queueId) {
-        QueueDto[] queues = getQueues();
-        for (QueueDto queue : queues) {
-            if (queue.getQueueId() == queueId) {
-                return queue;
-            }
+    @Scheduled(fixedDelay = REFRESH_INTERVAL_MS, initialDelay = REFRESH_INTERVAL_MS)
+    public synchronized void refresh() {
+        List<String> versions = DDragonAPI.getInstance().getVersions();
+        if (versions.isEmpty()) {
+            LOG.warn("Could not fetch Data Dragon versions, keeping {}", version);
+            return;
         }
-        return null;
+        String latest = versions.get(0);
+        Map<Integer, StaticChampion> latestChampions = DDragonAPI.getInstance().getChampions(latest, null);
+        if (latestChampions.isEmpty()) {
+            LOG.warn("Could not fetch champions for Data Dragon {}, keeping {}", latest, version);
+            return;
+        }
+        version = latest;
+        champions = latestChampions;
+        LOG.info("Loaded {} champions from Data Dragon {}", champions.size(), version);
     }
 
-    
+    public String getLatestVersion() {
+        ensureLoaded();
+        return version;
+    }
+
+    public Map<Integer, StaticChampion> getChampions() {
+        ensureLoaded();
+        return champions;
+    }
+
+    public Optional<StaticChampion> getChampion(int championId) {
+        return Optional.ofNullable(getChampions().get(championId));
+    }
+
     public Set<String> getChampionNames() {
-        return getChampions().getData().keySet();
-    }
-
-    public Set<String> getChampionNamesByClass(ChampionDto.Champion.Class className) {
-        return getChampions().getData().entrySet().stream()
-                .filter(entry -> entry.getValue().getTags().contains(className.toString()))
-                .map(Map.Entry::getKey)
+        return getChampions().values().stream()
+                .map(StaticChampion::getName)
                 .collect(Collectors.toSet());
-    }    
-
-    public String getChampionNameByKey(int key) {
-        Collection<ChampionDto.Champion> champions = getChampions().getData().values();
-        for (ChampionDto.Champion champion : champions) {
-            if (champion.getKey() == key) {
-                return champion.getName();
-            }
-        }
-        return null;
     }
 
-    public String getChampionIdByKey(int key) {
-        for (ChampionDto.Champion champion : getChampions().getData().values()) {
-            if (champion.getKey() == key) {
-                return champion.getId();
-            }
+    public Set<String> getChampionNamesByClass(ChampionClass championClass) {
+        return getChampions().values().stream()
+                .filter(champion -> champion.getTags().contains(championClass.name()))
+                .map(StaticChampion::getName)
+                .collect(Collectors.toSet());
+    }
+
+    public String getChampionName(int championId) {
+        return getChampion(championId).map(StaticChampion::getName).orElse("Unknown champion");
+    }
+
+    private void ensureLoaded() {
+        if (champions == null) {
+            refresh();
         }
-        return null;
+        if (champions == null) {
+            throw new IllegalStateException("Data Dragon data is not available");
+        }
     }
 }

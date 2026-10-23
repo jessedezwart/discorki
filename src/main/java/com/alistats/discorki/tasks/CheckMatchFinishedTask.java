@@ -1,13 +1,11 @@
 package com.alistats.discorki.tasks;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
@@ -26,13 +24,16 @@ import com.alistats.discorki.notification.personal_post_game.PersonalPostGameNot
 import com.alistats.discorki.notification.result.PersonalPostGameNotificationResult;
 import com.alistats.discorki.notification.result.TeamPostGameNotificationResult;
 import com.alistats.discorki.notification.team_post_game.TeamPostGameNotification;
+import com.alistats.discorki.riot.MatchUtil;
 import com.alistats.discorki.riot.controller.LeagueApiHelper;
-import com.alistats.discorki.riot.dto.MatchDto;
-import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
 
 import net.dv8tion.jda.api.JDA;
+import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.entities.MessageEmbed;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
+import no.stelar7.api.r4j.basic.exceptions.APIEnumNotUpToDateException;
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.lol.match.v5.MatchParticipant;
 
 @Component
 public class CheckMatchFinishedTask extends Task {
@@ -65,32 +66,57 @@ public class CheckMatchFinishedTask extends Task {
         LOG.info("Checking if game {} is finished...", match.getId());
         Set<Summoner> summoners = match.getTrackedSummoners();
         try {
-            MatchDto matchDto = leagueApiController.getMatch(match.getId());
-            if (matchDto.getInfo().isAborted()) {
+            LOLMatch matchDto = leagueApiController.getMatch(match.getId());
+            if (matchDto == null) {
+                LOG.info("Game {} is not finished yet.", match.getId());
+                return;
+            }
+
+            updateRiotIds(matchDto, summoners);
+
+            if (MatchUtil.isAborted(matchDto)) {
                 LOG.info("Game {} is finished, but seems to be a remake, not checking!", match.getId());
             } else {
                 LOG.info("Game {} is finished, checking for notable events...", match.getId());
                 checkForNotableEvents(matchDto, summoners);
             }
-            LOG.info("Setting {} to finished.", match.getId());
-            match.setStatus(Status.FINISHED);
-            matchRepo.save(match);
+        } catch (APIEnumNotUpToDateException e) {
+            // The game contains a queue, map or similar that R4J doesn't know yet. Retrying won't help.
+            LOG.warn("Game {} can't be parsed, skipping it. Is R4J outdated? {}", match.getId(), e.getMessage());
         } catch (Exception e) {
-            if (e.getMessage().contains("404")) {
-                LOG.info("Game {} is not finished yet.", match.getId());
-            } else {
-                LOG.error("Error while checking if game {} is finished. {}", match.getId(), e.getMessage());
-                e.printStackTrace();
-            }
+            LOG.error("Error while checking if game {} is finished.", match.getId(), e);
+            return;
+        }
+
+        LOG.info("Setting {} to finished.", match.getId());
+        match.setStatus(Status.FINISHED);
+        matchRepo.save(match);
+    }
+
+    /**
+     * Riot IDs can be changed by players, keep them up to date with the latest match.
+     */
+    private void updateRiotIds(LOLMatch match, Set<Summoner> summoners) {
+        for (MatchParticipant participant : match.getParticipants()) {
+            summoners.stream()
+                    .filter(summoner -> summoner.getPuuid().equals(participant.getPuuid()))
+                    .filter(summoner -> participant.getRiotIdName() != null
+                            && !summoner.hasRiotId(participant.getRiotIdName(), participant.getRiotIdTagline()))
+                    .forEach(summoner -> {
+                        LOG.info("Riot ID of {} changed to {}", summoner.getName(), MatchUtil.getRiotId(participant));
+                        summoner.setGameName(participant.getRiotIdName());
+                        summoner.setTagLine(participant.getRiotIdTagline());
+                        summonerRepo.save(summoner);
+                    });
         }
     }
 
-    private void checkForNotableEvents(MatchDto match, Set<Summoner> trackedPlayers) {
+    private void checkForNotableEvents(LOLMatch match, Set<Summoner> trackedPlayers) {
         // Clear rank cache
         cacheManager.getCache("ranks").clear();
 
-        HashMap<Summoner, ParticipantDto> trackedParticipantsMap = mapTrackedParticipants(trackedPlayers,
-                match.getInfo().getParticipants());
+        HashMap<Summoner, MatchParticipant> trackedParticipantsMap = mapTrackedParticipants(trackedPlayers,
+                match.getParticipants());
 
         EmbedContainer embeds = new EmbedContainer();
 
@@ -108,7 +134,7 @@ public class CheckMatchFinishedTask extends Task {
         // Check for team notifications
         teamNotificationCheckers.forEach(checker -> {
             LOG.info("Checking for '{}' for {}", checker.getClass().getSimpleName(),
-                    match.getInfo().getGameId());
+                    match.getGameId());
             Optional<TeamPostGameNotificationResult> result = checker.check(match, trackedParticipantsMap);
             if (result.isPresent()) {
                 for (Summoner summoner : trackedPlayers) {
@@ -122,15 +148,15 @@ public class CheckMatchFinishedTask extends Task {
         });
 
         if (embeds.isEmpty()) {
-            LOG.info("No notable events found for {}", match.getInfo().getGameId());
+            LOG.info("No notable events found for {}", match.getGameId());
             return;
         }
 
         // Get participants' ranks if one team notification was found
-        HashMap<ParticipantDto, Rank> participantRanks = new HashMap<>();
+        Map<String, Rank> participantRanks = new HashMap<>();
         if (embeds.hasTeamEmbeds()) {
-            LOG.info("Getting ranks for {}", match.getInfo().getGameId());
-            participantRanks = apiHelper.getParticipantRanks(match.getInfo().getParticipants());
+            LOG.info("Getting ranks for {}", match.getGameId());
+            participantRanks = apiHelper.getParticipantRanks(match.getParticipants());
         }
 
         // Initialize JDA
@@ -145,29 +171,28 @@ public class CheckMatchFinishedTask extends Task {
                 TextChannel channel = jda.getTextChannelById(server.getDefaultChannelId());
                 if (channel == null) {
                     LOG.error("Could not find default channel for guild {}", server.getName());
-                    return;
+                    continue;
                 }
                 LOG.info("Sending {} embeds to channel {} in guild {}", guildEmbedList.size(), channel.getName(),
                         server.getName());
-                channel.sendMessageEmbeds(guildEmbedList).queue();
+                // Discord allows up to 10 embeds per message
+                for (int i = 0; i < guildEmbedList.size(); i += Message.MAX_EMBED_COUNT) {
+                    channel.sendMessageEmbeds(guildEmbedList.subList(i,
+                            Math.min(i + Message.MAX_EMBED_COUNT, guildEmbedList.size()))).queue();
+                }
             } catch (Exception e) {
-                LOG.error("Error while building/sending embeds for game {}: {}", match.getInfo().getGameId(),
+                LOG.error("Error while building/sending embeds for game {}: {}", match.getGameId(),
                         e.getMessage());
-                return;
             }
         }
 
     }
 
-    public HashMap<Summoner, ParticipantDto> mapTrackedParticipants(Set<Summoner> trackedSummoners,
-            ParticipantDto[] participants) {
-        Set<ParticipantDto> filteredParticipants = Arrays.stream(participants)
-                .filter(p -> trackedSummoners.stream().anyMatch(s -> s.getPuuid().equals(p.getPuuid())))
-                .collect(Collectors.toCollection(HashSet::new));
-
-        HashMap<Summoner, ParticipantDto> summonerParticipantMap = new HashMap<>();
-        filteredParticipants.forEach(participant -> trackedSummoners.stream()
-                .filter(summoner -> summoner.getId().equals(participant.getSummonerId()))
+    public HashMap<Summoner, MatchParticipant> mapTrackedParticipants(Set<Summoner> trackedSummoners,
+            List<MatchParticipant> participants) {
+        HashMap<Summoner, MatchParticipant> summonerParticipantMap = new HashMap<>();
+        participants.forEach(participant -> trackedSummoners.stream()
+                .filter(summoner -> summoner.getPuuid().equals(participant.getPuuid()))
                 .forEach(summoner -> summonerParticipantMap.put(summoner, participant)));
 
         return summonerParticipantMap;

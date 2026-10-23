@@ -10,9 +10,10 @@ import com.alistats.discorki.model.Rank;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.PersonalPostGameNotificationResult;
-import com.alistats.discorki.riot.dto.MatchDto;
 import com.alistats.discorki.service.ImageService;
 import com.alistats.discorki.service.RankService;
+
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
 
 @Component
 public class RankChangedNotification extends Notification implements PersonalPostGameNotification {
@@ -35,14 +36,13 @@ public class RankChangedNotification extends Notification implements PersonalPos
     private RankService rankService;
 
     @Override
-    public Optional<PersonalPostGameNotificationResult> check(MatchDto match, Summoner summoner) {
+    public Optional<PersonalPostGameNotificationResult> check(LOLMatch match, Summoner summoner) {
         // Check if it was a ranked game
-        if (!match.getInfo().isRanked()) {
+        Optional<QueueType> rankedQueueTypeOpt = QueueType.from(match.getQueue());
+        if (rankedQueueTypeOpt.isEmpty()) {
             return Optional.empty();
         }
-
-        // Get queue type of match
-        QueueType rankedQueueType = QueueType.getQueueType(match.getInfo().getQueueId());
+        QueueType rankedQueueType = rankedQueueTypeOpt.get();
 
         // Get latest rank from db
         Optional<Rank> currentRankOptional = rankService.getCurrentRank(summoner, rankedQueueType);
@@ -65,8 +65,7 @@ public class RankChangedNotification extends Notification implements PersonalPos
         // Compare rank
         Rank currentRank = currentRankOptional.get();
         int compareResult = currentRank.getLeague().compareTo(newRank.getLeague());
-        String queueDescription = leagueGameConstantsController.getQueue(match.getInfo().getQueueId())
-                .getDescription();
+        String queueDescription = rankedQueueType.getName();
 
         if (compareResult == 0) {
             // Rank didn't change

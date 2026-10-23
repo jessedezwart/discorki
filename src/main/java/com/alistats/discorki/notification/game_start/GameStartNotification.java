@@ -5,8 +5,9 @@ import java.util.Set;
 
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.result.GameStartNotificationResult;
-import com.alistats.discorki.riot.dto.CurrentGameInfoDto;
+
+import no.stelar7.api.r4j.pojo.lol.spectator.SpectatorGameInfo;
 
 public interface GameStartNotification {
-    Optional<GameStartNotificationResult> check(CurrentGameInfoDto currentGame, Set<Summoner> summoners);
+    Optional<GameStartNotificationResult> check(SpectatorGameInfo currentGame, Set<Summoner> summoners);
 }

@@ -1,8 +1,8 @@
 package com.alistats.discorki.config;
 
-import java.util.Arrays;
+import java.util.List;
 
-import org.springframework.boot.autoconfigure.cache.CacheManagerCustomizer;
+import org.springframework.boot.cache.autoconfigure.CacheManagerCustomizer;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.stereotype.Component;
 
@@ -12,6 +12,6 @@ public class SimpleCacheCustomizer
 
   @Override
   public void customize(ConcurrentMapCacheManager cacheManager) {
-    cacheManager.setCacheNames(Arrays.asList("gamemodes", "gametypes", "queues", "maps", "seasons", "matches", "champions", "ranks"));
+    cacheManager.setCacheNames(List.of("ranks"));
   }
 }

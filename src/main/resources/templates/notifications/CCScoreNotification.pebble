@@ -1,3 +1,3 @@
-{{ participant.summonerName }} had a cc score of **{{ participant.getTimeCCingOthers }}**! That's {{ participant.timeCCingOthers / match.info.gameDuration / 60 }} per minute!
+{{ participant.riotIdName }} had a cc score of **{{ participant.timeCCingOthers }}**! That's {{ extraArgs.ccScorePerMinute }} per minute!
 
 *For every second a person is hard crowd-controlled, a player earns a score of 1. However, the score obtained from slows and snares will be slightly lower. A minimum treshold of 6 per minute needs to be reached to trigger this notification.*

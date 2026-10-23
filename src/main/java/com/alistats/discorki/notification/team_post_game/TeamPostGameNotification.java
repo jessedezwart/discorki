@@ -5,10 +5,11 @@ import java.util.Optional;
 
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.result.TeamPostGameNotificationResult;
-import com.alistats.discorki.riot.dto.MatchDto;
-import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
+
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.lol.match.v5.MatchParticipant;
 
 @FunctionalInterface
 public interface TeamPostGameNotification {
-    Optional<TeamPostGameNotificationResult> check(MatchDto match, HashMap<Summoner, ParticipantDto> trackedParticipants);
+    Optional<TeamPostGameNotificationResult> check(LOLMatch match, HashMap<Summoner, MatchParticipant> trackedParticipants);
 }

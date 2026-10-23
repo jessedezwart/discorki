@@ -1,6 +1,9 @@
 package com.alistats.discorki.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -12,7 +15,11 @@ import lombok.Setter;
 @NoArgsConstructor
 @Embeddable
 public class League implements Comparable<League> {
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(32)")
     private Division division;
+    @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(32)")
     private Tier tier;
 
     @Override

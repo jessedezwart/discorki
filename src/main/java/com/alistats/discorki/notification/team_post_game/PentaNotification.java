@@ -8,8 +8,9 @@ import org.springframework.stereotype.Component;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.TeamPostGameNotificationResult;
-import com.alistats.discorki.riot.dto.MatchDto;
-import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
+
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.lol.match.v5.MatchParticipant;
 
 /**
  * A summoner got a penta in the last game
@@ -30,17 +31,17 @@ public class PentaNotification extends Notification implements TeamPostGameNotif
     }
 
     @Override
-    public Optional<TeamPostGameNotificationResult> check(MatchDto match, HashMap<Summoner, ParticipantDto> trackedParticipants) {
-        HashMap<Summoner, ParticipantDto> subjects = new HashMap<>();
+    public Optional<TeamPostGameNotificationResult> check(LOLMatch match, HashMap<Summoner, MatchParticipant> trackedParticipants) {
+        HashMap<Summoner, MatchParticipant> subjects = new HashMap<>();
         for (Summoner summoner : trackedParticipants.keySet()) {
-            ParticipantDto participant = trackedParticipants.get(summoner);
+            MatchParticipant participant = trackedParticipants.get(summoner);
             if (participant.getPentaKills() > 0) {
                 subjects.put(summoner, participant);
             }
         }
 
         // if there are any tracked participants left, notify
-        if (trackedParticipants.size() > 0) {
+        if (!subjects.isEmpty()) {
             TeamPostGameNotificationResult result = new TeamPostGameNotificationResult();
             result.setNotification(this);
             result.setMatch(match);

@@ -1,7 +1,5 @@
 package com.alistats.discorki.discord.command;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -42,14 +40,14 @@ public class Leaderboard extends AbstractCommand implements Command {
 
         // check if there are any ranks
         if (ranks.isEmpty()) {
-            event.reply("There are no ranks to show.").queue();
+            reply(event, "There are no ranks to show.");
             return;
         }
 
         Set<MessageEmbed> embeds = build(ranks);
 
         if (embeds.isEmpty()) {
-            event.reply("There are no ranks to show.").queue();
+            reply(event, "There are no ranks to show.");
             return;
         }
 
@@ -113,8 +111,8 @@ public class Leaderboard extends AbstractCommand implements Command {
         sb = new StringBuilder();
         for (Rank rank : ranks) {
             // Build external link for summoner
-            String urlEncodedUsername = URLEncoder.encode(rank.getSummoner().getName(), StandardCharsets.UTF_8);
-            String summonerLookupUrl = String.format(config.getSummonerLookupUrl(), urlEncodedUsername);
+            String summonerLookupUrl = config.formatSummonerLookupUrl(rank.getSummoner().getGameName(),
+                    rank.getSummoner().getTagLine());
             sb.append("[")
                 .append(rank.getSummoner().getName())
                 .append("](")

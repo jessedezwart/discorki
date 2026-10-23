@@ -8,8 +8,9 @@ import org.springframework.stereotype.Component;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.TeamPostGameNotificationResult;
-import com.alistats.discorki.riot.dto.MatchDto;
-import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
+
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.lol.match.v5.MatchParticipant;
 
 /**
  * A summoner got a penta in the last game
@@ -30,10 +31,10 @@ public class LongGameNotification extends Notification implements TeamPostGameNo
     }
 
     @Override
-    public Optional<TeamPostGameNotificationResult> check(MatchDto match, HashMap<Summoner, ParticipantDto> trackedParticipants) {
+    public Optional<TeamPostGameNotificationResult> check(LOLMatch match, HashMap<Summoner, MatchParticipant> trackedParticipants) {
         final int LONG_GAME_DURATION = 50 * 60; // 55 minutes
 
-        if (match.getInfo().getGameDuration() > LONG_GAME_DURATION) {
+        if (match.getGameDuration() > LONG_GAME_DURATION) {
             TeamPostGameNotificationResult result = new TeamPostGameNotificationResult();
             result.setNotification(this);
             result.setMatch(match);

@@ -1,144 +1,125 @@
 package com.alistats.discorki.riot.controller;
 
-import java.net.URI;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
+import java.util.function.Supplier;
 
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestTemplate;
 
-import com.alistats.discorki.config.RestTemplateResponseErrorHandler;
 import com.alistats.discorki.config.RiotConfigProperties;
-import com.alistats.discorki.riot.dto.CurrentGameInfoDto;
-import com.alistats.discorki.riot.dto.LeagueEntryDto;
-import com.alistats.discorki.riot.dto.MatchDto;
-import com.alistats.discorki.riot.dto.SummonerDto;
-import com.google.common.util.concurrent.RateLimiter;
 
+import no.stelar7.api.r4j.basic.APICredentials;
+import no.stelar7.api.r4j.basic.calling.DataCall;
+import no.stelar7.api.r4j.basic.constants.api.regions.LeagueShard;
+import no.stelar7.api.r4j.basic.constants.api.regions.RegionShard;
+import no.stelar7.api.r4j.basic.constants.types.ApiKeyType;
+import no.stelar7.api.r4j.basic.exceptions.APIHTTPErrorReason;
+import no.stelar7.api.r4j.basic.exceptions.APIResponseException;
+import no.stelar7.api.r4j.impl.R4J;
+import no.stelar7.api.r4j.pojo.lol.league.LeagueEntry;
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.lol.spectator.SpectatorGameInfo;
+import no.stelar7.api.r4j.pojo.lol.summoner.Summoner;
+import no.stelar7.api.r4j.pojo.shared.RiotAccount;
+
+/**
+ * Thin wrapper around R4J that binds every call to the configured platform and
+ * region. R4J takes care of rate limiting (based on the headers Riot sends back)
+ * and of retrying 429 and 5xx responses.
+ *
+ * Unless stated otherwise, methods return null when Riot responds with a 404.
+ */
 @Service
 public class LeagueApiController {
-        private final RiotConfigProperties config;
-        private final RestTemplate restTemplate;
-        private final RateLimiter rateLimiter;
+        private static final Logger LOG = LoggerFactory.getLogger(LeagueApiController.class);
 
-        private static final String BASE_URL = "api.riotgames.com/lol";
-        private static final int TWO_MINUTES_IN_SECONDS = 120;
+        private final R4J r4j;
+        private final LeagueShard platform;
+        private final RegionShard region;
+        // account-v1 is not served from the SEA region, those accounts live in ASIA
+        private final RegionShard accountRegion;
 
-        // Since the checkInGame task is scheduled every 5 minutes at second 0
-        // and the checkMatchFinished task is scheduled every minute at second 30,
-        // we assume that the timeout wont interfere with new requests
-        private static final int MAX_RATE_LIMIT_TIMEOUT = 30;
+        public LeagueApiController(RiotConfigProperties config) {
+                r4j = new R4J(new APICredentials(config.getKey()));
+                // R4J installs a file system cache by default, which would serve stale
+                // spectator and league data. Caching is done with Spring where needed.
+                DataCall.setCacheProvider(null);
 
-        public LeagueApiController(RiotConfigProperties config, RestTemplateBuilder restTemplateBuilder) {
-                restTemplate = restTemplateBuilder
-                                .errorHandler(new RestTemplateResponseErrorHandler())
-                                .build();
-                this.config = config;
-
-                rateLimiter = RateLimiter
-                                .create(Double.parseDouble(config.getRateLimitPerTwoMinutes())
-                                                / TWO_MINUTES_IN_SECONDS);
+                platform = LeagueShard.fromString(config.getPlatformRouting())
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Unknown platform routing: " + config.getPlatformRouting()));
+                region = RegionShard.getFromCode(config.getRegionalRouting())
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Unknown regional routing: " + config.getRegionalRouting()));
+                accountRegion = region == RegionShard.SEA ? RegionShard.ASIA : region;
         }
 
-        private void rateLimit() {
-                rateLimiter.tryAcquire(1, MAX_RATE_LIMIT_TIMEOUT, TimeUnit.SECONDS);
+        public RiotAccount getAccountByRiotId(String gameName, String tagLine) {
+                return call(() -> r4j.getAccountAPI().getAccountByTag(accountRegion, gameName, tagLine, ApiKeyType.LOL));
         }
 
-        public SummonerDto getSummoner(String summonerName)
-                        throws HttpClientErrorException, HttpServerErrorException {
-                rateLimit();
-                String url = "https://" +
-                                config.getPlatformRouting() +
-                                "." +
-                                BASE_URL +
-                                "/summoner/v4/summoners/by-name/" +
-                                URLEncoder.encode(summonerName, StandardCharsets.UTF_8) +
-                                "?api_key=" +
-                                config.getKey();
-
-                URI uri = URI.create(url);
-
-                return restTemplate.getForObject(uri, SummonerDto.class);
-
+        public RiotAccount getAccountByPuuid(String puuid) {
+                return call(() -> r4j.getAccountAPI().getAccountByPUUID(accountRegion, puuid, ApiKeyType.LOL));
         }
 
-        public CurrentGameInfoDto getCurrentGameInfo(String encryptedSummonerId)
-                        throws HttpClientErrorException, HttpServerErrorException {
-                rateLimit();
-                String url = "https://" +
-                                config.getPlatformRouting() +
-                                "." +
-                                BASE_URL +
-                                "/spectator/v4/active-games/by-summoner/" +
-                                encryptedSummonerId +
-                                "?api_key=" +
-                                config.getKey();
-
-                URI uri = URI.create(url);
-
-                return restTemplate.getForObject(uri, CurrentGameInfoDto.class);
+        public Summoner getSummoner(String puuid) {
+                return call(() -> r4j.getLoLAPI().getSummonerAPI().getSummonerByPUUID(platform, puuid));
         }
 
-        @Cacheable("matches")
-        public MatchDto getMatch(long matchId) throws HttpClientErrorException, HttpServerErrorException {
-                rateLimit();
-                String url = "https://" +
-                                config.getRegionalRouting() +
-                                "." +
-                                BASE_URL +
-                                "/match/v5/matches/" +
-                                config.getPlatformRouting().toUpperCase() +
-                                "_" +
-                                matchId +
-                                "?api_key=" +
-                                config.getKey();
-
-                URI uri = URI.create(url);
-
-                return restTemplate.getForObject(uri, MatchDto.class);
+        /**
+         * @return the game the player is currently in, or null if they are not in a game
+         */
+        public SpectatorGameInfo getCurrentGame(String puuid) {
+                return call(() -> r4j.getLoLAPI().getSpectatorAPI().getCurrentGame(platform, puuid));
         }
 
+        /**
+         * @param gameId the game id without platform prefix, as returned by the spectator API
+         * @return the match, or null if it has not finished yet
+         */
+        public LOLMatch getMatch(long gameId) {
+                return getMatch(platform.name() + "_" + gameId);
+        }
+
+        /**
+         * @param matchId the match id with platform prefix, e.g. EUW1_1234567890
+         */
+        public LOLMatch getMatch(String matchId) {
+                return call(() -> r4j.getLoLAPI().getMatchAPI().getMatch(region, matchId));
+        }
+
+        /**
+         * @return all league entries of the player, empty when unranked
+         */
         @Cacheable("ranks")
-        public LeagueEntryDto[] getLeagueEntries(String encryptedSummonerId)
-                        throws HttpClientErrorException, HttpServerErrorException {
-                rateLimit();
-                String url = "https://" +
-                                config.getPlatformRouting() +
-                                "." +
-                                BASE_URL +
-                                "/league/v4/entries/by-summoner/" +
-                                encryptedSummonerId +
-                                "?api_key=" +
-                                config.getKey();
-
-                URI uri = URI.create(url);
-
-                return restTemplate.getForObject(uri, LeagueEntryDto[].class);
+        public List<LeagueEntry> getLeagueEntries(String puuid) {
+                return call(() -> r4j.getLoLAPI().getLeagueAPI().getLeagueEntriesByPUUID(platform, puuid));
         }
 
-        public String getMostRecentMatchId(String encryptedSummonerId)
-                        throws HttpClientErrorException, HttpServerErrorException {
-                rateLimit();
-                StringBuilder url = new StringBuilder();
-                url.append("https://")
-                                .append(config.getRegionalRouting())
-                                .append(".")
-                                .append(BASE_URL)
-                                .append("/match/v5/matches/by-puuid/")
-                                .append(encryptedSummonerId)
-                                .append("/ids?start=0&count=1&api_key=")
-                                .append(config.getKey());
-
-                URI uri = URI.create(url.toString());
-                String[] matchIds = restTemplate.getForObject(uri, String[].class);
-                if (matchIds != null) {
-                        return matchIds[0];
+        public String getMostRecentMatchId(String puuid) {
+                List<String> matchIds = call(() -> r4j.getLoLAPI().getMatchAPI()
+                                .getMatchList(region, puuid, null, null, 0, 1, null, null));
+                if (matchIds == null || matchIds.isEmpty()) {
+                        return null;
                 }
-                return null;
+                return matchIds.get(0);
+        }
+
+        public LeagueShard getPlatform() {
+                return platform;
+        }
+
+        private <T> T call(Supplier<T> supplier) {
+                try {
+                        return supplier.get();
+                } catch (APIResponseException e) {
+                        if (e.getReason() == APIHTTPErrorReason.ERROR_401
+                                        || e.getReason() == APIHTTPErrorReason.ERROR_403) {
+                                LOG.error("Riot API key was rejected, did it expire?");
+                        }
+                        throw e;
+                }
         }
 }

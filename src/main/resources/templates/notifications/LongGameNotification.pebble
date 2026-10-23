@@ -1,2 +1,2 @@
-{{ participant.summonerName }} just came out of a really long game.
-The game took **{{ match.info.gameDuration / 60 }} minutes**!
+{{ participant.riotIdName }} just came out of a really long game.
+The game took **{{ match.gameDuration / 60 }} minutes**!

@@ -8,8 +8,10 @@ import org.springframework.stereotype.Component;
 import com.alistats.discorki.model.Summoner;
 import com.alistats.discorki.notification.Notification;
 import com.alistats.discorki.notification.result.TeamPostGameNotificationResult;
-import com.alistats.discorki.riot.dto.MatchDto;
-import com.alistats.discorki.riot.dto.MatchDto.InfoDto.ParticipantDto;
+
+import no.stelar7.api.r4j.basic.constants.types.lol.LaneType;
+import no.stelar7.api.r4j.pojo.lol.match.v5.LOLMatch;
+import no.stelar7.api.r4j.pojo.lol.match.v5.MatchParticipant;
 
 @Component
 public class OutdamagedBySupportNotification extends Notification implements TeamPostGameNotification {
@@ -27,37 +29,37 @@ public class OutdamagedBySupportNotification extends Notification implements Tea
     }
 
     @Override
-    public Optional<TeamPostGameNotificationResult> check(MatchDto match, HashMap<Summoner, ParticipantDto> trackedParticipants) {
+    public Optional<TeamPostGameNotificationResult> check(LOLMatch match, HashMap<Summoner, MatchParticipant> trackedParticipants) {
         // Since we COULD potentially have tracked players on opposite teams:
         // one being support on red, one being adc on blue, we SHOULD check
         // on team-basis. But this is extremely unlikely. For now, we can
         // just check on role and assume the tracked participants are on the same team.
         // After, we check team-equality, so we only have false negatives, no false
         // positives
-        ParticipantDto bottom = null;
-        ParticipantDto support = null;
+        MatchParticipant bottom = null;
+        MatchParticipant support = null;
 
         // Loop through tracked participants
-        for (ParticipantDto participant : trackedParticipants.values()) {
+        for (MatchParticipant participant : trackedParticipants.values()) {
             // Check if participant is adc
-            if (participant.getTeamPosition().equals("BOTTOM")) {
+            if (participant.getChampionSelectLane() == LaneType.BOT) {
                 bottom = participant;
             }
             // Check if participant is support
-            else if (participant.getTeamPosition().equals("UTILITY")) {
+            else if (participant.getChampionSelectLane() == LaneType.UTILITY) {
                 support = participant;
             }
         }
 
         // Support and bottom are not tracked, or they belong to different teams
-        if (support == null || bottom == null || support.getTeamId() != bottom.getTeamId()) {
+        if (support == null || bottom == null || support.getTeam() != bottom.getTeam()) {
             return Optional.empty();
         }
 
         // Check if support did more damage than adc
         if (support.getTotalDamageDealtToChampions() > bottom.getTotalDamageDealtToChampions()) {
             for (Summoner summoner : trackedParticipants.keySet()) {
-                if (trackedParticipants.get(summoner).getSummonerName().equals(support.getSummonerName())) {
+                if (trackedParticipants.get(summoner).getPuuid().equals(support.getPuuid())) {
                     TeamPostGameNotificationResult result = new TeamPostGameNotificationResult();
                     result.setNotification(this);
                     result.setMatch(match);

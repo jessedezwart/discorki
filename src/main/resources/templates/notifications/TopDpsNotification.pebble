@@ -1,3 +1,3 @@
-{{ participant.summonerName }} just got TOP DPS with **{{ champion }}**.
-They dealt **{{ participant.totalDamageDealtToChampions }}** damage in *{{ match.info.gameDuration / 60 }} minutes*.
+{{ participant.riotIdName }} just got TOP DPS with **{{ champion }}**.
+They dealt **{{ participant.totalDamageDealtToChampions }}** damage in *{{ match.gameDuration / 60 }} minutes*.
 They finished the game with a KDA of **{{ participant.kills }}/{{ participant.deaths }}/{{ participant.assists }}**.

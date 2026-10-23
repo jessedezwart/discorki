@@ -15,7 +15,7 @@ import org.springframework.stereotype.Component;
 
 import com.alistats.discorki.discord.command.shared.AbstractCommand;
 import com.alistats.discorki.discord.command.shared.Command;
-import com.alistats.discorki.riot.dto.constants.ChampionDto;
+import com.alistats.discorki.riot.controller.GameConstantsController.ChampionClass;
 
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.MessageEmbed;
@@ -60,7 +60,7 @@ public class Aram extends AbstractCommand implements Command {
         if (champpionClassOpt.isPresent()) {
             String championClass = champpionClassOpt.get().getAsString();
             try {
-                championNames = gameConstantsController.getChampionNamesByClass(ChampionDto.Champion.Class.valueOf(championClass));
+                championNames = gameConstantsController.getChampionNamesByClass(ChampionClass.valueOf(championClass));
             } catch (IllegalArgumentException e) {
                 event.getHook().sendMessage("⚠️ Invalid champion class.").queue();
                 return;

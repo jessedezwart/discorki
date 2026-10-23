@@ -28,9 +28,9 @@ public class Match {
     private long id;
     @ManyToMany
     @JoinTable(
-        name = "match_summoner", 
-        joinColumns = @JoinColumn(name = "match_id"), 
-        inverseJoinColumns = @JoinColumn(name = "summoner_id")
+        name = "match_riot_account",
+        joinColumns = @JoinColumn(name = "match_id"),
+        inverseJoinColumns = @JoinColumn(name = "riot_account_puuid")
     )
     private Set<Summoner> trackedSummoners;
     private Status status;

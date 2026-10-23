@@ -7,8 +7,8 @@ import java.util.HashMap;
 
 import org.springframework.stereotype.Component;
 
-import com.mitchellbosecke.pebble.PebbleEngine;
-import com.mitchellbosecke.pebble.template.PebbleTemplate;
+import io.pebbletemplates.pebble.PebbleEngine;
+import io.pebbletemplates.pebble.template.PebbleTemplate;
 
 @Component
 public class TemplatingService {
